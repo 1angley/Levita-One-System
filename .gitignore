@@ -1,0 +1,23 @@
+# Local development files
+user_data/
+*.db
+*.db-journal
+*.db-wal
+*.log
+*.txt
+*.png
+*.jpg
+*.jpeg
+.env
+.venv/
+__pycache__/
+.idea/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
