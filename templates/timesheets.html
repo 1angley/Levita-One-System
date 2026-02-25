@@ -28,6 +28,7 @@
         <div class="space-x-6">
             <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
             <a href="/timesheets" class="font-bold text-black border-b-2 border-black pb-1">Timesheets</a>
+            <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
             <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
         </div>
     </nav>
@@ -91,14 +92,25 @@
 
             <div class="divide-y divide-gray-200">
                 {% for project in projects %}
+                {% set saved_row = saved_data.get(project.id) %}
                 <div class="grid grid-cols-15 hover:bg-gray-50 transition group" data-project-id="{{ project.id }}" data-hours-per-day="{{ project.hours_per_day or 8.0 }}" data-day-rate="{{ project.day_rate or 0.0 }}">
-                    <div class="col-span-3 p-4 border-r border-gray-200 flex flex-col justify-center">
+                    <div class="col-span-3 p-4 border-r border-gray-200 flex flex-col justify-center relative">
                         <div class="font-bold text-black truncate" title="{{ project.name }}">{{ project.name }}</div>
                         <div class="text-xs text-gray-400 truncate">{{ project.client_name }}</div>
+                        {% if project.timesheet_system == 'Salesforce' %}
+                        <div class="mt-2 flex items-center space-x-2 {% if not saved_row %}hidden{% endif %}" id="submit-container-{{ project.id }}">
+                            <button onclick="submitTimesheet(this, {{ project.id }})" 
+                                    class="text-[10px] bg-cta text-white px-2 py-1 rounded font-bold uppercase tracking-wider hover:opacity-80 transition">
+                                Submit
+                            </button>
+                            <span id="status-{{ project.id }}" class="text-[10px] font-bold uppercase tracking-widest text-cta">
+                                {{ saved_row.status if saved_row and saved_row.status else '' }}
+                            </span>
+                        </div>
+                        {% endif %}
                     </div>
                     
                     {% set row_total = 0 %}
-                    {% set saved_row = saved_data.get(project.id) %}
                     {% for i in range(7) %}
                     <div class="col-span-1 p-2 border-r border-gray-200 flex items-center justify-center {% if i == 6 %}bg-gray-50/50{% endif %}">
                         {% set val = 0 %}
@@ -128,7 +140,7 @@
                     
                     <div class="col-span-1 p-4 text-center border-r border-gray-200 flex items-center justify-center font-bold text-gray-500">
                         {% if project.days_cycle_unit == 'Week' %}
-                            {{ ((project.agreed_days or 0) * (project.hours_per_day or 0)) | int }}
+                            {{ ((project.agreed_days or 0.0) * (project.hours_per_day or 0)) | round(1) if (project.agreed_days or 0.0) % 1 != 0 else ((project.agreed_days or 0.0) * (project.hours_per_day or 0)) | int }}
                         {% else %}
                             -
                         {% endif %}
@@ -237,6 +249,7 @@
             const btnText = saveBtn.querySelector('span').innerText;
             
             if (btnText === 'Edit Timesheet') {
+                window.isEditing = true;
                 // Make grid editable
                 document.querySelectorAll('input[type="number"]').forEach(input => {
                     // Don't enable Sunday if it was intentionally disabled
@@ -247,11 +260,47 @@
                 saveBtn.querySelector('span').innerText = 'Save Timesheet';
             } else {
                 // Perform save
-                await saveTimesheet();
+                const btnText = saveBtn.querySelector('span').innerText;
+                const isReset = btnText === 'Save Timesheet' && document.querySelector('input[type="number"]:not([disabled])') !== null;
+                // Wait, if it was 'Edit Timesheet' and we clicked it, it changed to 'Save Timesheet'.
+                // If it IS 'Save Timesheet' and we click it, we want to save.
+                // We should pass a flag if it was an edit.
+                await saveTimesheet(window.isEditing || false);
+                window.isEditing = false;
             }
         }
 
-        async function saveTimesheet() {
+        async function submitTimesheet(btn, projectId) {
+            const payload = {
+                project_id: projectId,
+                week_start: "{{ current_monday }}"
+            };
+
+            try {
+                const response = await fetch('/timesheets/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    const statusSpan = document.getElementById(`status-${projectId}`);
+                    if (statusSpan) {
+                        statusSpan.innerText = 'Pending';
+                    }
+                    alert('Timesheet submitted to Salesforce (Pending)');
+                } else {
+                    alert('Error submitting timesheet.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred during submission.');
+            }
+        }
+
+        async function saveTimesheet(resetStatus = false) {
             const rows = document.querySelectorAll('[data-project-id]');
             const entries = [];
             
@@ -272,7 +321,8 @@
 
             const payload = {
                 week_start: "{{ current_monday }}",
-                entries: entries
+                entries: entries,
+                reset_status: resetStatus
             };
 
             try {
@@ -298,7 +348,22 @@
                         input.disabled = true;
                     });
                     
+                    if (resetStatus) {
+                        // If we reset the status, we should probably clear the status labels in the UI
+                        document.querySelectorAll('[id^="status-"]').forEach(span => {
+                            span.innerText = '';
+                        });
+                    }
+
+                    // Show submit buttons for Salesforce projects now that it's saved
+                    document.querySelectorAll('[id^="submit-container-"]').forEach(container => {
+                        container.classList.remove('hidden');
+                    });
+                    
                     alert('Timesheet saved successfully!');
+                    // We no longer necessarily need to reload if we update the UI dynamically,
+                    // but it's safer for now to ensure all template logic (like row_total) is updated correctly.
+                    window.location.reload(); 
                 } else {
                     alert('Error saving timesheet.');
                 }

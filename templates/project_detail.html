@@ -25,6 +25,7 @@
         <div class="space-x-6">
             <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
             <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+            <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
             <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
         </div>
     </nav>
@@ -64,10 +65,10 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Timesheet System</label>
                         <select name="timesheet_system" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
-                            <option value="None">None</option>
-                            <option value="Salesforce">Salesforce</option>
-                            <option value="Other">Other</option>
-                            <option value="TBC">TBC</option>
+                            <option value="None" {% if project.timesheet_system == 'None' %}selected{% endif %}>None</option>
+                            <option value="Salesforce" {% if project.timesheet_system == 'Salesforce' %}selected{% endif %}>Salesforce</option>
+                            <option value="Other" {% if project.timesheet_system == 'Other' %}selected{% endif %}>Other</option>
+                            <option value="TBC" {% if project.timesheet_system == 'TBC' %}selected{% endif %}>TBC</option>
                         </select>
                     </div>
                     <div>
@@ -80,7 +81,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Agreed Days</label>
-                        <input type="number" name="agreed_days" value="{{ project.agreed_days or 0 }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                        <input type="number" name="agreed_days" step="0.1" value="{{ project.agreed_days or 0.0 }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Per</label>

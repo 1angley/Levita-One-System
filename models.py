@@ -19,7 +19,7 @@ class Project(Base):
     client_ref = Column(String)
     
     # New billing fields
-    agreed_days = Column(Integer, default=0)
+    agreed_days = Column(Float, default=0.0)
     days_cycle_unit = Column(String, default="Week") # Week or Month
     uk_vat = Column(Boolean, default=True)
     
@@ -66,8 +66,25 @@ class TimesheetRow(Base):
     day7_hours = Column(Float, default=0.0)
     
     day_rate = Column(Float)
+    status = Column(String, default="") # "Pending", "Approved", or ""
+    invoice_id = Column(Integer, ForeignKey('invoices.id'))
     
     project = relationship("Project")
+    invoice = relationship("Invoice", back_populates="timesheet_rows")
+
+class Invoice(Base):
+    """An invoice generated for one or more timesheet rows."""
+    __tablename__ = 'invoices'
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'))
+    invoice_number = Column(String, unique=True)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    amount = Column(Float)
+    status = Column(String, default="Draft") # Draft, Sent, Paid
+    
+    project = relationship("Project")
+    timesheet_rows = relationship("TimesheetRow", back_populates="invoice")
 
 # Database setup
 DATABASE_URL = "sqlite:///timesheets.db"

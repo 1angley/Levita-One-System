@@ -25,6 +25,7 @@
         <div class="space-x-6">
             <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
             <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+            <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
             <a href="/projects" class="font-bold text-black border-b-2 border-black pb-1">Engagements</a>
         </div>
     </nav>
@@ -159,6 +160,17 @@
                     <div class="col-span-2">
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Address</label>
                         <textarea name="address" rows="2" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Agreed Days</label>
+                        <input type="number" name="agreed_days" step="0.1" value="0.0" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Per</label>
+                        <select name="days_cycle_unit" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                            <option value="Week">Week</option>
+                            <option value="Month">Month</option>
+                        </select>
                     </div>
                 </div>
                 <div class="flex items-center space-x-8 pt-2">
