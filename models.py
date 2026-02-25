@@ -48,6 +48,27 @@ class TimeEntry(Base):
     
     project = relationship("Project", back_populates="entries")
 
+class TimesheetRow(Base):
+    """A row in the weekly timesheet, representing a week of hours for a project."""
+    __tablename__ = 'timesheet_rows'
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'))
+    week_start_date = Column(Date, nullable=False) # Always the Monday
+    
+    # Hours for each day (Mon-Sun)
+    day1_hours = Column(Float, default=0.0)
+    day2_hours = Column(Float, default=0.0)
+    day3_hours = Column(Float, default=0.0)
+    day4_hours = Column(Float, default=0.0)
+    day5_hours = Column(Float, default=0.0)
+    day6_hours = Column(Float, default=0.0)
+    day7_hours = Column(Float, default=0.0)
+    
+    day_rate = Column(Float)
+    
+    project = relationship("Project")
+
 # Database setup
 DATABASE_URL = "sqlite:///timesheets.db"
 engine = create_engine(DATABASE_URL)

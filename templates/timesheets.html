@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levita One - Timesheets</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cta: '#0F766E',
+                    },
+                    gridTemplateColumns: {
+                        '15': 'repeat(15, minmax(0, 1fr))',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+    <nav class="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200">
+        <div class="flex items-center space-x-4">
+            <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
+        </div>
+        <div class="space-x-6">
+            <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+            <a href="/timesheets" class="font-bold text-black border-b-2 border-black pb-1">Timesheets</a>
+            <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-10">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-extrabold text-black tracking-tight">Weekly Timesheet</h1>
+            <div class="flex items-center space-x-6">
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Timesheet Status</span>
+                    <span id="timesheet-status" class="text-sm font-extrabold {% if saved_data %}text-cta{% else %}text-orange-500{% endif %} uppercase tracking-widest">
+                        {% if saved_data %}Saved{% else %}New{% endif %}
+                    </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <a href="/timesheets" class="p-2 bg-white hover:bg-gray-100 rounded-lg shadow-sm border border-gray-200 transition text-gray-400 hover:text-cta group" title="Jump to Today">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                    </a>
+                    <div class="flex items-center space-x-4 bg-white p-2 rounded-lg shadow-sm border border-gray-200">
+                        <a href="/timesheets?date={{ prev_week }}" class="p-2 hover:bg-gray-100 rounded-md transition text-black" title="Previous Week">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                        <div class="relative flex items-center group px-2 border-l border-r border-gray-100 min-w-[200px] justify-center">
+                            <span class="font-bold text-sm uppercase tracking-widest cursor-pointer group-hover:text-cta transition">
+                                {{ week_dates[0].strftime('%d %b') }} - {{ week_dates[6].strftime('%d %b %Y') }}
+                            </span>
+                            <input type="date" 
+                                   class="absolute inset-0 opacity-0 cursor-pointer" 
+                                   value="{{ week_dates[0].strftime('%Y-%m-%d') }}"
+                                   onchange="if(this.value) window.location.href='/timesheets?date=' + this.value">
+                        </div>
+                        <a href="/timesheets?date={{ next_week }}" class="p-2 hover:bg-gray-100 rounded-md transition text-black" title="Next Week">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="grid grid-cols-15 bg-gray-50 border-b border-gray-200">
+                <div class="col-span-3 p-4 text-xs font-bold text-gray-400 uppercase tracking-widest border-r border-gray-200">Engagement</div>
+                {% for date in week_dates %}
+                <div class="col-span-1 p-4 text-center {% if loop.index == 7 %}bg-gray-100 text-gray-300{% else %}text-black{% endif %} border-r border-gray-200">
+                    <div class="text-xs font-bold uppercase tracking-widest">{{ date.strftime('%a') }}</div>
+                    <div class="text-lg font-extrabold">{{ date.strftime('%d') }}</div>
+                </div>
+                {% endfor %}
+                <div class="col-span-1 p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-r border-gray-200">Agreed</div>
+                <div class="col-span-1 p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-r border-gray-200">Hours</div>
+                <div class="col-span-1 p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-r border-gray-200">Days</div>
+                <div class="col-span-1 p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-r border-gray-200">Rate</div>
+                <div class="col-span-1 p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">Billable</div>
+            </div>
+
+            <div class="divide-y divide-gray-200">
+                {% for project in projects %}
+                <div class="grid grid-cols-15 hover:bg-gray-50 transition group" data-project-id="{{ project.id }}" data-hours-per-day="{{ project.hours_per_day or 8.0 }}" data-day-rate="{{ project.day_rate or 0.0 }}">
+                    <div class="col-span-3 p-4 border-r border-gray-200 flex flex-col justify-center">
+                        <div class="font-bold text-black truncate" title="{{ project.name }}">{{ project.name }}</div>
+                        <div class="text-xs text-gray-400 truncate">{{ project.client_name }}</div>
+                    </div>
+                    
+                    {% set row_total = 0 %}
+                    {% set saved_row = saved_data.get(project.id) %}
+                    {% for i in range(7) %}
+                    <div class="col-span-1 p-2 border-r border-gray-200 flex items-center justify-center {% if i == 6 %}bg-gray-50/50{% endif %}">
+                        {% set val = 0 %}
+                        {% if saved_row %}
+                            {% if i == 0 %}{% set val = saved_row.day1_hours %}{% endif %}
+                            {% if i == 1 %}{% set val = saved_row.day2_hours %}{% endif %}
+                            {% if i == 2 %}{% set val = saved_row.day3_hours %}{% endif %}
+                            {% if i == 3 %}{% set val = saved_row.day4_hours %}{% endif %}
+                            {% if i == 4 %}{% set val = saved_row.day5_hours %}{% endif %}
+                            {% if i == 5 %}{% set val = saved_row.day6_hours %}{% endif %}
+                            {% if i == 6 %}{% set val = saved_row.day7_hours %}{% endif %}
+                        {% else %}
+                            {% if project.days_cycle_unit == 'Week' and i < 5 and i < (project.agreed_days or 0) %}
+                                {% set val = project.hours_per_day %}
+                            {% endif %}
+                        {% endif %}
+                        {% set row_total = row_total + val %}
+                        
+                        <input type="number" step="1" 
+                               class="day-input-{{ i }} w-full h-10 text-center bg-transparent border-none focus:ring-2 focus:ring-cta rounded-md font-bold text-lg 
+                                      {% if i == 6 %}text-gray-300 pointer-events-none{% else %}text-black{% endif %}"
+                               value="{{ val | int if val > 0 else '' }}"
+                               placeholder="0"
+                               {% if i == 6 or saved_data %}disabled{% endif %}>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="col-span-1 p-4 text-center border-r border-gray-200 flex items-center justify-center font-bold text-gray-500">
+                        {% if project.days_cycle_unit == 'Week' %}
+                            {{ ((project.agreed_days or 0) * (project.hours_per_day or 0)) | int }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                    <div class="col-span-1 p-4 text-center border-r border-gray-200 flex items-center justify-center font-extrabold text-cta row-total">
+                        {{ row_total | int }}
+                    </div>
+                    <div class="col-span-1 p-4 text-center border-r border-gray-200 flex items-center justify-center font-extrabold text-cta row-days">
+                        {% if project.hours_per_day and project.hours_per_day > 0 %}
+                            {% set rd = row_total / project.hours_per_day %}
+                            {{ rd | round(2) if rd % 1 != 0 else rd | int }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <div class="col-span-1 p-4 text-center border-r border-gray-200 flex items-center justify-center font-bold text-gray-500">
+                        £{{ project.day_rate | int if project.day_rate % 1 == 0 else project.day_rate }}
+                    </div>
+                    <div class="col-span-1 p-4 text-center flex items-center justify-center font-extrabold text-cta row-billable">
+                        {% if project.hours_per_day and project.hours_per_day > 0 %}
+                            {% set rd = row_total / project.hours_per_day %}
+                            {% set billable = rd * (project.day_rate or 0) %}
+                            £{{ billable | int if billable % 1 == 0 else billable | round(2) }}
+                        {% else %}
+                            £0
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-20 text-center text-gray-400 italic">
+                    No live engagements found. <a href="/projects" class="text-cta font-bold hover:underline">Add one here.</a>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="grid grid-cols-15 bg-gray-50 border-t border-gray-200 font-extrabold">
+                <div class="col-span-3 p-4 text-xs font-bold text-gray-400 uppercase tracking-widest border-r border-gray-200">Daily Total</div>
+                {% for i in range(7) %}
+                <div id="total-{{ i }}" class="col-span-1 p-4 text-center text-lg border-r border-gray-200 {% if i == 6 %}text-gray-300{% endif %}">
+                    0
+                </div>
+                {% endfor %}
+                <div class="col-span-5"></div>
+            </div>
+        </div>
+        
+        <div class="mt-8 flex justify-end">
+                <button onclick="handleButtonClick()" id="save-btn" class="bg-cta text-white px-10 py-3 rounded-lg font-bold hover:opacity-90 transition shadow-lg flex items-center space-x-2">
+                    <span>{% if saved_data %}Edit Timesheet{% else %}Save Timesheet{% endif %}</span>
+                </button>
+        </div>
+    </div>
+
+    <script>
+        function calculateTotals() {
+            // Calculate Daily Totals
+            for (let i = 0; i < 7; i++) {
+                let total = 0;
+                const inputs = document.querySelectorAll(`.day-input-${i}`);
+                inputs.forEach(input => {
+                    if (input.value) {
+                        total += parseFloat(input.value);
+                    }
+                });
+                document.getElementById(`total-${i}`).innerText = Math.round(total);
+            }
+
+            // Calculate Row Totals
+            document.querySelectorAll('div[data-project-id]').forEach(row => {
+                let rowTotal = 0;
+                const hoursPerDay = parseFloat(row.getAttribute('data-hours-per-day')) || 8;
+                const dayRate = parseFloat(row.getAttribute('data-day-rate')) || 0;
+                
+                row.querySelectorAll('input[type="number"]').forEach(input => {
+                    if (input.value) {
+                        rowTotal += parseFloat(input.value);
+                    }
+                });
+                
+                const rowDays = rowTotal / hoursPerDay;
+                const rowBillable = rowDays * dayRate;
+                
+                row.querySelector('.row-total').innerText = Math.round(rowTotal);
+                row.querySelector('.row-days').innerText = rowDays % 1 === 0 ? rowDays : parseFloat(rowDays.toFixed(2));
+                
+                const billableFormatted = rowBillable % 1 === 0 ? rowBillable : parseFloat(rowBillable.toFixed(2));
+                row.querySelector('.row-billable').innerText = `£${billableFormatted}`;
+            });
+        }
+
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value && !e.target.classList.contains('pointer-events-none')) {
+                    // Round the input value to the nearest integer
+                    const roundedValue = Math.round(parseFloat(e.target.value));
+                    if (parseFloat(e.target.value) !== roundedValue) {
+                        e.target.value = roundedValue;
+                    }
+                }
+                calculateTotals();
+            });
+        });
+
+        async function handleButtonClick() {
+            const saveBtn = document.getElementById('save-btn');
+            const btnText = saveBtn.querySelector('span').innerText;
+            
+            if (btnText === 'Edit Timesheet') {
+                // Make grid editable
+                document.querySelectorAll('input[type="number"]').forEach(input => {
+                    // Don't enable Sunday if it was intentionally disabled
+                    if (!input.classList.contains('day-input-6')) {
+                        input.disabled = false;
+                    }
+                });
+                saveBtn.querySelector('span').innerText = 'Save Timesheet';
+            } else {
+                // Perform save
+                await saveTimesheet();
+            }
+        }
+
+        async function saveTimesheet() {
+            const rows = document.querySelectorAll('[data-project-id]');
+            const entries = [];
+            
+            rows.forEach(row => {
+                const projectId = row.getAttribute('data-project-id');
+                const dayRate = row.getAttribute('data-day-rate');
+                const hours = [];
+                for (let i = 0; i < 7; i++) {
+                    const val = row.querySelector(`.day-input-${i}`).value;
+                    hours.push(parseFloat(val) || 0);
+                }
+                entries.push({
+                    project_id: parseInt(projectId),
+                    day_rate: parseFloat(dayRate),
+                    hours: hours
+                });
+            });
+
+            const payload = {
+                week_start: "{{ current_monday }}",
+                entries: entries
+            };
+
+            try {
+                const response = await fetch('/timesheets/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    const statusSpan = document.getElementById('timesheet-status');
+                    statusSpan.innerText = 'Saved';
+                    statusSpan.classList.remove('text-orange-500');
+                    statusSpan.classList.add('text-cta');
+                    
+                    const saveBtn = document.getElementById('save-btn');
+                    saveBtn.querySelector('span').innerText = 'Edit Timesheet';
+                    
+                    // Make grid read-only again
+                    document.querySelectorAll('input[type="number"]').forEach(input => {
+                        input.disabled = true;
+                    });
+                    
+                    alert('Timesheet saved successfully!');
+                } else {
+                    alert('Error saving timesheet.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while saving.');
+            }
+        }
+
+        // Initial calculation
+        calculateTotals();
+    </script>
+</body>
+</html>
