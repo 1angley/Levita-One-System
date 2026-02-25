@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levita One - Project Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cta: '#0F766E',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+    <nav class="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200">
+        <div class="flex items-center space-x-4">
+            <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
+        </div>
+        <div class="space-x-6">
+            <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+            <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 py-10">
+        <div class="mb-8 flex items-center justify-between">
+            <div>
+                <a href="/projects" class="text-black font-bold hover:underline mb-2 inline-block">&larr; Back to Engagements</a>
+                <h1 class="text-3xl font-extrabold text-black tracking-tight">Project Details: {{ project.name }}</h1>
+            </div>
+            <span class="px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full 
+                {% if project.is_active %}bg-black text-white{% else %}bg-gray-200 text-gray-600{% endif %}">
+                {{ 'Live' if project.is_active else 'Completed' }}
+            </span>
+        </div>
+
+        <form action="/projects/{{ project.id }}" method="POST" class="space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-8 border border-gray-200">
+                <h2 class="text-lg font-bold mb-6 pb-2 border-b border-gray-100 uppercase tracking-widest text-gray-400">Core Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Project Name</label>
+                        <input type="text" name="name" value="{{ project.name }}" required class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Client Name</label>
+                        <input type="text" name="client_name" value="{{ project.client_name }}" required class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Day Rate (£)</label>
+                        <input type="number" name="day_rate" step="0.01" value="{{ project.day_rate }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Hours in a Day</label>
+                        <input type="number" name="hours_per_day" step="0.5" value="{{ project.hours_per_day }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Timesheet System</label>
+                        <select name="timesheet_system" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                            <option value="None">None</option>
+                            <option value="Salesforce">Salesforce</option>
+                            <option value="Other">Other</option>
+                            <option value="TBC">TBC</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Client Ref / PCN</label>
+                        <input type="text" name="client_ref" value="{{ project.client_ref or '' }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Timesheet System Code</label>
+                        <input type="text" name="salesforce_code" value="{{ project.salesforce_code or '' }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Agreed Days</label>
+                        <input type="number" name="agreed_days" value="{{ project.agreed_days or 0 }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Per</label>
+                        <select name="days_cycle_unit" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                            <option value="Week" {% if project.days_cycle_unit == 'Week' %}selected{% endif %}>Week</option>
+                            <option value="Month" {% if project.days_cycle_unit == 'Month' %}selected{% endif %}>Month</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center pt-4">
+                        <input type="checkbox" name="uk_vat" id="uk_vat_check" {% if project.uk_vat %}checked{% endif %} class="w-5 h-5 text-black rounded focus:ring-black border-gray-300">
+                        <label for="uk_vat_check" class="ml-3 block text-sm font-bold text-black uppercase tracking-widest">UK VAT</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-8 border border-gray-200">
+                <h2 class="text-lg font-bold mb-6 pb-2 border-b border-gray-100 uppercase tracking-widest text-gray-400">Client Contact & Billing</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Key Client Contact</label>
+                        <input type="text" name="key_contact" value="{{ project.key_contact or '' }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Key Contact Email</label>
+                        <input type="text" name="key_contact_email" value="{{ project.key_contact_email or '' }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Address</label>
+                        <textarea name="address" rows="3" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">{{ project.address or '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" id="is_active_check" {% if project.is_active %}checked{% endif %} class="w-5 h-5 text-black rounded focus:ring-black border-gray-300">
+                    <label for="is_active_check" class="ml-3 block text-sm font-bold text-black uppercase tracking-widest">Live Engagement</label>
+                </div>
+                <p class="ml-auto text-xs text-gray-400 uppercase tracking-widest font-bold">Inactive projects are hidden from active lists.</p>
+            </div>
+
+            <div class="flex justify-between items-center pt-4">
+                <button type="button" onclick="window.location.href='/projects'" class="bg-gray-100 text-gray-600 px-8 py-3 rounded-lg font-bold hover:bg-gray-200 transition">
+                    Discard Changes
+                </button>
+                <button type="submit" class="bg-cta text-white px-12 py-3 rounded-lg font-bold hover:opacity-90 transition shadow-lg">
+                    Update Engagement
+                </button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

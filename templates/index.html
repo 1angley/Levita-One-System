@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levita One - Landing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cta: '#0F766E',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-white min-h-screen flex flex-col items-center justify-center font-sans text-gray-900">
+    <div class="max-w-2xl text-center px-6">
+        <img src="/static/logo.png" alt="Levita One" class="h-48 mx-auto mb-8">
+        <p class="text-xl text-gray-600 mb-10 leading-relaxed">
+            Your single source of truth for timesheets. Bridge the gap between your local records and third-party systems like Salesforce Kantata.
+        </p>
+        
+        <div class="space-y-4 md:space-y-0 md:space-x-4 flex flex-col md:flex-row justify-center">
+            <a href="/projects" class="inline-block bg-cta hover:opacity-90 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105">
+                Manage Engagements
+            </a>
+            <a href="#" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-4 px-8 rounded-lg shadow-md border border-gray-200 transform transition hover:scale-105">
+                Weekly Timesheet
+            </a>
+        </div>
+
+        <div class="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+            <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="text-gray-400 mb-2 font-bold uppercase text-xs tracking-wider">Source of Truth</div>
+                <h3 class="text-lg font-bold mb-2">Centralized Data</h3>
+                <p class="text-gray-500 text-sm">One place for all your client data, rates, and codes.</p>
+            </div>
+            <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="text-gray-400 mb-2 font-bold uppercase text-xs tracking-wider">Automation</div>
+                <h3 class="text-lg font-bold mb-2">Auto-Sync</h3>
+                <p class="text-gray-500 text-sm">Push entries to Salesforce automatically using Levita's robot.</p>
+            </div>
+            <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="text-gray-400 mb-2 font-bold uppercase text-xs tracking-wider">Insights</div>
+                <h3 class="text-lg font-bold mb-2">Rate Tracking</h3>
+                <p class="text-gray-500 text-sm">Easily track day rates and hours across all clients.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
