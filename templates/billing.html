@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levita One - Billing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cta: '#0F766E',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+    <nav class="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200">
+        <div class="flex items-center space-x-4">
+            <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
+        </div>
+        <div class="space-x-6">
+            <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+            <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+            <a href="/billing" class="font-bold text-black border-b-2 border-black pb-1">Billing</a>
+            <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-10">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-extrabold text-black tracking-tight">Billing</h1>
+            <div class="flex items-center space-x-6">
+                <!-- Weekly/Monthly Toggle -->
+                <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+                    <a href="/billing?view=weekly&week={{ current_week }}" 
+                       class="px-4 py-1.5 rounded-md text-sm font-bold transition {{ 'bg-white shadow-sm text-black' if view == 'weekly' else 'text-gray-500 hover:text-black' }}">
+                        Weekly
+                    </a>
+                    <a href="/billing?view=monthly&month={{ current_month }}" 
+                       class="px-4 py-1.5 rounded-md text-sm font-bold transition {{ 'bg-white shadow-sm text-black' if view == 'monthly' else 'text-gray-500 hover:text-black' }}">
+                        Monthly
+                    </a>
+                </div>
+
+                <div class="flex items-center space-x-4 bg-white p-2 rounded-lg shadow-sm border border-gray-200">
+                    <a href="/billing?view={{ view }}&{{ 'week' if view == 'weekly' else 'month' }}={{ prev_period }}" class="p-2 hover:bg-gray-100 rounded-md transition text-black" title="Previous">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                    <div class="relative flex items-center group px-2 border-l border-r border-gray-100 min-w-[150px] justify-center">
+                        <span class="font-bold text-sm uppercase tracking-widest cursor-pointer group-hover:text-cta transition text-center">
+                            {{ display_name }}
+                        </span>
+                        {% if view == 'monthly' %}
+                        <input type="month" 
+                               class="absolute inset-0 opacity-0 cursor-pointer" 
+                               value="{{ current_period }}"
+                               onchange="if(this.value) window.location.href='/billing?view=monthly&month=' + this.value">
+                        {% else %}
+                        <input type="date" 
+                               class="absolute inset-0 opacity-0 cursor-pointer" 
+                               value="{{ current_period }}"
+                               onchange="if(this.value) window.location.href='/billing?view=weekly&week=' + this.value">
+                        {% endif %}
+                    </div>
+                    <a href="/billing?view={{ view }}&{{ 'week' if view == 'weekly' else 'month' }}={{ next_period }}" class="p-2 hover:bg-gray-100 rounded-md transition text-black" title="Next">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Calendar View -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 bg-gray-50 border-b border-gray-200">
+                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Monthly Calendar</h2>
+                    </div>
+                    <div class="p-4">
+                        <div class="grid grid-cols-7 gap-1">
+                            {% for day in ['M', 'T', 'W', 'T', 'F', 'S', 'S'] %}
+                            <div class="text-center text-[10px] font-bold text-gray-300 uppercase py-2">{{ day }}</div>
+                            {% endfor %}
+                            
+                            {% for week in calendar %}
+                                {% for day in week %}
+                                <div class="aspect-square flex items-center justify-center text-sm font-bold rounded-lg
+                                    {% if day == 0 %}
+                                        text-transparent
+                                    {% else %}
+                                        {% if day == today_day and is_current %}
+                                            bg-cta text-white shadow-md
+                                        {% else %}
+                                            text-black hover:bg-gray-50
+                                        {% endif %}
+                                    {% endif %}">
+                                    {{ day if day != 0 else '' }}
+                                </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Summary Grid -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 bg-gray-50 border-b border-gray-200">
+                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Engagement Summary</h2>
+                    </div>
+                    <div class="divide-y divide-gray-200">
+                        <div class="grid grid-cols-7 bg-gray-50/50">
+                            <div class="col-span-2 p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Engagement</div>
+                            <div class="p-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Hours</div>
+                            <div class="p-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Days</div>
+                            <div class="p-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Agreed</div>
+                            <div class="p-4 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Billable</div>
+                            <div class="p-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Actions</div>
+                        </div>
+                        
+                        {% for item in project_billing %}
+                        <div class="grid grid-cols-7 hover:bg-gray-50 transition group">
+                            <div class="col-span-2 p-4">
+                                <div class="font-bold text-black truncate">{{ item.project.name }}</div>
+                                <div class="text-[10px] text-gray-400 uppercase tracking-wider">{{ item.project.client_name }}</div>
+                            </div>
+                            <div class="p-4 text-center flex items-center justify-center font-bold text-gray-600">
+                                {{ item.total_hours | int if item.total_hours % 1 == 0 else item.total_hours | round(1) }}
+                            </div>
+                            <div class="p-4 text-center flex items-center justify-center font-extrabold text-cta">
+                                {{ item.total_days | int if item.total_days % 1 == 0 else item.total_days | round(2) }}
+                            </div>
+                            <div class="p-4 text-center flex items-center justify-center text-xs font-bold text-gray-400">
+                                {{ item.agreed_display }}
+                            </div>
+                            <div class="p-4 text-right flex items-center justify-end font-extrabold text-cta">
+                                £{{ "{:,.2f}".format(item.billable_amount) }}
+                            </div>
+                            <div class="p-4 text-center flex items-center justify-center">
+                                {% if item.total_hours > 0 %}
+                                    {% if item.has_invoice %}
+                                        <span class="text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-2 py-1 rounded">Invoiced</span>
+                                    {% else %}
+                                        <form action="/billing/invoice" method="POST">
+                                            <input type="hidden" name="project_id" value="{{ item.project.id }}">
+                                            <input type="hidden" name="row_ids" value="{{ item.row_ids }}">
+                                            <button type="submit" class="bg-cta text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-black transition uppercase tracking-widest">
+                                                Invoice
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">-</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="p-10 text-center text-gray-400 italic">
+                            No data for this {{ 'week' if view == 'weekly' else 'month' }}.
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if project_billing %}
+                    <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total {{ view | capitalize }} Billable</span>
+                        <span class="text-xl font-extrabold text-black">
+                            {% set grand_total = project_billing | map(attribute='billable_amount') | sum %}
+                            £{{ "{:,.2f}".format(grand_total) }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
