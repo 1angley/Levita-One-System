@@ -27,6 +27,7 @@ class Project(Base):
     key_contact = Column(String)
     key_contact_email = Column(String)
     address = Column(String)
+    description = Column(String)
     
     is_active = Column(Boolean, default=True)
     
@@ -85,6 +86,19 @@ class Invoice(Base):
     
     project = relationship("Project")
     timesheet_rows = relationship("TimesheetRow", back_populates="invoice")
+
+class Settings(Base):
+    """Global application settings."""
+    __tablename__ = 'settings'
+    
+    id = Column(Integer, primary_key=True)
+    draft_invoice_email = Column(String)
+    email_invoice_template = Column(String) # For the body of the email
+    invoice_template_file = Column(String) # The filename from 'invoice templates' folder
+    
+    # New settings
+    invoice_generation_timing = Column(String, default="Immediate") # Immediate or Batch
+    batch_submission_time = Column(String) # e.g., "17:00"
 
 # Database setup
 DATABASE_URL = "sqlite:///timesheets.db"

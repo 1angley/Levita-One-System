@@ -22,11 +22,27 @@
         <div class="flex items-center space-x-4">
             <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
         </div>
-        <div class="space-x-6">
-            <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
-            <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
-            <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
-            <a href="/projects" class="font-bold text-black border-b-2 border-black pb-1">Engagements</a>
+        <div class="flex items-center space-x-6">
+            <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
+                <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+                <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+                <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
+                <a href="/projects" class="font-bold text-black border-b-2 border-black pb-1">Engagements</a>
+            </div>
+            
+            <!-- User Icon with Dropdown -->
+            <div class="relative inline-block text-left" id="user-menu-container">
+                <button type="button" class="flex items-center justify-center w-10 h-10 rounded-full bg-cta text-white font-bold text-sm focus:outline-none border-2 border-transparent hover:border-cta transition" id="user-menu-button">
+                    AL
+                </button>
+
+                <!-- Dropdown menu -->
+                <div class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" id="user-menu-dropdown">
+                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                        <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-bold" role="menuitem">Settings</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -149,6 +165,11 @@
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Timesheet System Code</label>
                         <input type="text" name="salesforce_code" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
                     </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Invoice Description</label>
+                        <input type="text" name="description" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black" placeholder="e.g. Consultancy Services">
+                        <p class="mt-1 text-[10px] text-gray-400 italic">This description will appear on the invoice line items.</p>
+                    </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Key Client Contact</label>
                         <input type="text" name="key_contact" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
@@ -192,6 +213,20 @@
     </div>
 
     <script>
+        const userMenuButton = document.getElementById('user-menu-button');
+        const userMenuDropdown = document.getElementById('user-menu-dropdown');
+
+        userMenuButton.addEventListener('click', () => {
+            userMenuDropdown.classList.toggle('hidden');
+        });
+
+        // Close the dropdown when clicking outside
+        window.addEventListener('click', (event) => {
+            if (!document.getElementById('user-menu-container').contains(event.target)) {
+                userMenuDropdown.classList.add('hidden');
+            }
+        });
+
         function toggleModal(id) {
             const modal = document.getElementById(id);
             modal.classList.toggle('hidden');

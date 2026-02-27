@@ -22,11 +22,27 @@
         <div class="flex items-center space-x-4">
             <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
         </div>
-        <div class="space-x-6">
-            <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
-            <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
-            <a href="/billing" class="font-bold text-black border-b-2 border-black pb-1">Billing</a>
-            <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+        <div class="flex items-center space-x-6">
+            <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
+                <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+                <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+                <a href="/billing" class="font-bold text-black border-b-2 border-black pb-1">Billing</a>
+                <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+            </div>
+            
+            <!-- User Icon with Dropdown -->
+            <div class="relative inline-block text-left" id="user-menu-container">
+                <button type="button" class="flex items-center justify-center w-10 h-10 rounded-full bg-cta text-white font-bold text-sm focus:outline-none border-2 border-transparent hover:border-cta transition" id="user-menu-button">
+                    AL
+                </button>
+
+                <!-- Dropdown menu -->
+                <div class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" id="user-menu-dropdown">
+                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                        <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-bold" role="menuitem">Settings</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -150,13 +166,11 @@
                                     {% if item.has_invoice %}
                                         <span class="text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-2 py-1 rounded">Invoiced</span>
                                     {% else %}
-                                        <form action="/billing/invoice" method="POST">
-                                            <input type="hidden" name="project_id" value="{{ item.project.id }}">
-                                            <input type="hidden" name="row_ids" value="{{ item.row_ids }}">
-                                            <button type="submit" class="bg-cta text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-black transition uppercase tracking-widest">
+                                        <div id="invoice-action-{{ item.project.id }}">
+                                            <button onclick="createInvoice('{{ item.project.id }}', '{{ item.row_ids }}')" class="bg-cta text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-black transition uppercase tracking-widest">
                                                 Invoice
                                             </button>
-                                        </form>
+                                        </div>
                                     {% endif %}
                                 {% else %}
                                     <span class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">-</span>
@@ -184,4 +198,57 @@
         </div>
     </div>
 </body>
+<script>
+    const userMenuButton = document.getElementById('user-menu-button');
+    const userMenuDropdown = document.getElementById('user-menu-dropdown');
+
+    userMenuButton.addEventListener('click', () => {
+        userMenuDropdown.classList.toggle('hidden');
+    });
+
+    // Close the dropdown when clicking outside
+    window.addEventListener('click', (event) => {
+        if (!document.getElementById('user-menu-container').contains(event.target)) {
+            userMenuDropdown.classList.add('hidden');
+        }
+    });
+
+    async function createInvoice(projectId, rowIds) {
+        const container = document.getElementById(`invoice-action-${projectId}`);
+        const originalContent = container.innerHTML;
+        container.innerHTML = `<span class="text-[10px] font-bold text-gray-400 animate-pulse">GENERATING...</span>`;
+        
+        try {
+            const formData = new FormData();
+            formData.append('project_id', projectId);
+            formData.append('row_ids', rowIds);
+            
+            const response = await fetch('/billing/invoice', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center space-y-1">
+                        <span class="text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded">Invoiced</span>
+                        <a href="${result.pdf_url}" target="_blank" class="text-[10px] font-bold text-cta hover:underline uppercase tracking-widest">
+                            Open PDF
+                        </a>
+                    </div>
+                `;
+            } else {
+                console.error('Server error:', result.message);
+                alert('Server Error: ' + result.message);
+                container.innerHTML = originalContent;
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            alert('An error occurred: ' + error.message);
+            container.innerHTML = originalContent;
+        }
+    }
+</script>
 </html>

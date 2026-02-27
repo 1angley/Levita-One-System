@@ -1,4 +1,4 @@
-from models import SessionLocal, Project, init_db
+from models import SessionLocal, Project, Settings, init_db
 import os
 
 def seed():
@@ -15,6 +15,14 @@ def seed():
     init_db()
     
     session = SessionLocal()
+
+    # Seed default settings
+    settings = Settings(
+        invoice_template_file="default.html",
+        invoice_generation_timing="Immediate"
+    )
+    session.add(settings)
+    print("Default settings seeded (template: default.html).")
     
     projects_data = [
         {
@@ -42,7 +50,7 @@ def seed():
             "client_ref": None,
             "agreed_days": 0,
             "days_cycle_unit": "Week",
-            "uk_vat": True,
+            "uk_vat": False,
             "key_contact": "Bo Kenneryd",
             "key_contact_email": "vincent.holland@consid.se; bo.kenneryd@consid.se",
             "address": "Storgatan 16 B, 341 44 Ljungby, Sweden"
@@ -55,7 +63,7 @@ def seed():
             "timesheet_system": "Salesforce",
             "salesforce_code": "RSP: SoW073 Future Lennon Analytical Shadowing P2 (CIL)",
             "client_ref": "E001435 - RSP:SoW073 Future Lennon AS P2",
-            "agreed_days": 0,
+            "agreed_days": 3,
             "days_cycle_unit": "Week",
             "uk_vat": True,
             "key_contact": None,
@@ -70,7 +78,7 @@ def seed():
             "timesheet_system": "TBC",
             "salesforce_code": None,
             "client_ref": None,
-            "agreed_days": 0,
+            "agreed_days": 4,
             "days_cycle_unit": "Week",
             "uk_vat": True,
             "key_contact": None,
@@ -85,7 +93,7 @@ def seed():
             "timesheet_system": "Salesforce",
             "salesforce_code": "E001435 - RSP:SoW073 Future Lennon AS P3",
             "client_ref": "E001435 - RSP:SoW073 Future Lennon AS P3",
-            "agreed_days": 0,
+            "agreed_days": 3,
             "days_cycle_unit": "Week",
             "uk_vat": True,
             "key_contact": None,

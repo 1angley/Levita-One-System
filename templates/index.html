@@ -17,42 +17,88 @@
         }
     </script>
 </head>
-<body class="bg-white min-h-screen flex flex-col items-center justify-center font-sans text-gray-900">
-    <div class="max-w-2xl text-center px-6">
-        <img src="/static/logo.png" alt="Levita One" class="h-48 mx-auto mb-8">
-        <p class="text-xl text-gray-600 mb-10 leading-relaxed">
-            Your single source of truth for timesheets. Bridge the gap between your local records and third-party systems like Salesforce Kantata.
-        </p>
-        
-        <div class="space-y-4 md:space-y-0 md:space-x-4 flex flex-col md:flex-row justify-center">
-            <a href="/projects" class="inline-block bg-cta hover:opacity-90 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105">
-                Manage Engagements
-            </a>
-            <a href="/timesheets" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-4 px-8 rounded-lg shadow-md border border-gray-200 transform transition hover:scale-105">
-                Weekly Timesheet
-            </a>
-            <a href="/billing" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-4 px-8 rounded-lg shadow-md border border-gray-200 transform transition hover:scale-105">
-                Billing
-            </a>
+<body class="bg-white min-h-screen flex flex-col font-sans text-gray-900">
+    <nav class="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200 w-full">
+        <div class="flex items-center space-x-4">
+            <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
         </div>
+        <div class="flex items-center space-x-6">
+            <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
+                <a href="/" class="font-bold text-black border-b-2 border-black pb-1">Dashboard</a>
+                <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+                <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
+                <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+            </div>
+            
+            <!-- User Icon with Dropdown -->
+            <div class="relative inline-block text-left" id="user-menu-container">
+                <button type="button" class="flex items-center justify-center w-10 h-10 rounded-full bg-cta text-white font-bold text-sm focus:outline-none border-2 border-transparent hover:border-cta transition" id="user-menu-button">
+                    AL
+                </button>
 
-        <div class="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-            <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200">
-                <div class="text-gray-400 mb-2 font-bold uppercase text-xs tracking-wider">Source of Truth</div>
-                <h3 class="text-lg font-bold mb-2">Centralized Data</h3>
-                <p class="text-gray-500 text-sm">One place for all your client data, rates, and codes.</p>
+                <!-- Dropdown menu -->
+                <div class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" id="user-menu-dropdown">
+                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                        <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-bold" role="menuitem">Settings</a>
+                    </div>
+                </div>
             </div>
-            <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200">
-                <div class="text-gray-400 mb-2 font-bold uppercase text-xs tracking-wider">Automation</div>
-                <h3 class="text-lg font-bold mb-2">Auto-Sync</h3>
-                <p class="text-gray-500 text-sm">Push entries to Salesforce automatically using Levita's robot.</p>
+        </div>
+    </nav>
+
+    <div class="flex-grow flex flex-col items-center justify-center py-20">
+        <div class="max-w-2xl text-center px-6">
+            <img src="/static/logo.png" alt="Levita One" class="h-48 mx-auto mb-8">
+            <p class="text-xl text-gray-600 mb-10 leading-relaxed">
+                Your single source of truth for timesheets. Bridge the gap between your local records and third-party systems like Salesforce Kantata.
+            </p>
+            
+            <div class="space-y-4 md:space-y-0 md:space-x-4 flex flex-col md:flex-row justify-center">
+                <a href="/projects" class="inline-block bg-cta hover:opacity-90 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105">
+                    Manage Engagements
+                </a>
+                <a href="/timesheets" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-4 px-8 rounded-lg shadow-md border border-gray-200 transform transition hover:scale-105">
+                    Weekly Timesheet
+                </a>
+                <a href="/billing" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-4 px-8 rounded-lg shadow-md border border-gray-200 transform transition hover:scale-105">
+                    Billing
+                </a>
             </div>
-            <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200">
-                <div class="text-gray-400 mb-2 font-bold uppercase text-xs tracking-wider">Insights</div>
-                <h3 class="text-lg font-bold mb-2">Rate Tracking</h3>
-                <p class="text-gray-500 text-sm">Easily track day rates and hours across all clients.</p>
+
+            <div class="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="text-gray-400 mb-2 font-bold uppercase text-xs tracking-wider">Source of Truth</div>
+                    <h3 class="text-lg font-bold mb-2">Centralized Data</h3>
+                    <p class="text-gray-500 text-sm">One place for all your client data, rates, and codes.</p>
+                </div>
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="text-gray-400 mb-2 font-bold uppercase text-xs tracking-wider">Automation</div>
+                    <h3 class="text-lg font-bold mb-2">Auto-Sync</h3>
+                    <p class="text-gray-500 text-sm">Push entries to Salesforce automatically using Levita's robot.</p>
+                </div>
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="text-gray-400 mb-2 font-bold uppercase text-xs tracking-wider">Insights</div>
+                    <h3 class="text-lg font-bold mb-2">Rate Tracking</h3>
+                    <p class="text-gray-500 text-sm">Easily track day rates and hours across all clients.</p>
+                </div>
             </div>
         </div>
     </div>
+
+    <script>
+        const userMenuButton = document.getElementById('user-menu-button');
+        const userMenuDropdown = document.getElementById('user-menu-dropdown');
+
+        userMenuButton.addEventListener('click', () => {
+            userMenuDropdown.classList.toggle('hidden');
+        });
+
+        // Close the dropdown when clicking outside
+        window.addEventListener('click', (event) => {
+            if (!document.getElementById('user-menu-container').contains(event.target)) {
+                userMenuDropdown.classList.add('hidden');
+            }
+        });
+    </script>
 </body>
 </html>

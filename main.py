@@ -3,8 +3,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from models import SessionLocal, Project, TimesheetRow, Invoice
+from models import SessionLocal, Project, TimesheetRow, Invoice, Settings
 import uvicorn
+import os
 from datetime import datetime, timedelta
 from typing import List
 from pydantic import BaseModel
@@ -40,6 +41,55 @@ def get_db():
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request, db: Session = Depends(get_db)):
+    settings = db.query(Settings).first()
+    if not settings:
+        settings = Settings() # Provide empty object if none exists
+    
+    # List available templates
+    template_dir = "invoice templates"
+    available_templates = []
+    if os.path.exists(template_dir):
+        available_templates = [f for f in os.listdir(template_dir) if f.endswith(".html")]
+        
+    return templates.TemplateResponse("settings.html", {
+        "request": request, 
+        "settings": settings,
+        "available_templates": available_templates
+    })
+
+@app.post("/settings")
+async def save_settings(
+    draft_invoice_email: str = Form(None),
+    email_invoice_template: str = Form(None),
+    invoice_template_file: str = Form(None),
+    invoice_generation_timing: str = Form("Immediate"),
+    batch_submission_time: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    settings = db.query(Settings).first()
+    if not settings:
+        settings = Settings()
+        db.add(settings)
+    
+    settings.draft_invoice_email = draft_invoice_email
+    settings.email_invoice_template = email_invoice_template
+    settings.invoice_template_file = invoice_template_file
+    settings.invoice_generation_timing = invoice_generation_timing
+    settings.batch_submission_time = batch_submission_time
+    db.commit()
+    return RedirectResponse(url="/settings", status_code=303)
+
+@app.post("/settings/invoice-preview")
+async def preview_invoice_template(invoice_template_file: str = Form(...)):
+    template_path = os.path.join("invoice templates", invoice_template_file)
+    if os.path.exists(template_path):
+        with open(template_path, "r") as f:
+            content = f.read()
+        return HTMLResponse(content=content)
+    return HTMLResponse(content="Template not found", status_code=404)
+
 @app.get("/projects", response_class=HTMLResponse)
 async def list_projects(request: Request, db: Session = Depends(get_db)):
     projects = db.query(Project).all()
@@ -65,6 +115,7 @@ async def add_project(
     key_contact: str = Form(None),
     key_contact_email: str = Form(None),
     address: str = Form(None),
+    description: str = Form(None),
     is_active: bool = Form(True),
     db: Session = Depends(get_db)
 ):
@@ -82,6 +133,7 @@ async def add_project(
         key_contact=key_contact,
         key_contact_email=key_contact_email,
         address=address,
+        description=description,
         is_active=is_active
     )
     db.add(new_project)
@@ -104,6 +156,7 @@ async def update_project(
     key_contact: str = Form(None),
     key_contact_email: str = Form(None),
     address: str = Form(None),
+    description: str = Form(None),
     is_active: bool = Form(False),
     db: Session = Depends(get_db)
 ):
@@ -122,6 +175,7 @@ async def update_project(
         project.key_contact = key_contact
         project.key_contact_email = key_contact_email
         project.address = address
+        project.description = description
         project.is_active = is_active
         db.commit()
     return RedirectResponse(url="/projects", status_code=303)
@@ -337,45 +391,178 @@ async def billing_page(request: Request, month: str = None, week: str = None, vi
         "current_month": month or current_month_date.strftime("%Y-%m")
     })
 
+from jinja2 import Template
+from playwright.async_api import async_playwright
+import asyncio
+
 @app.post("/billing/invoice")
 async def create_invoice(project_id: int = Form(...), row_ids: str = Form(...), db: Session = Depends(get_db)):
     # Create a simple invoice
-    project = db.query(Project).get(project_id)
+    print(f"DEBUG: Starting invoice generation for project_id={project_id}")
+    project = db.get(Project, project_id)
     if not project:
         return {"status": "error", "message": "Project not found"}
     
-    ids = [int(rid) for rid in row_ids.split(",") if rid]
-    rows = db.query(TimesheetRow).filter(TimesheetRow.id.in_(ids)).all()
-    
-    if not rows:
-        return {"status": "error", "message": "No timesheet rows found"}
-    
-    total_hours = 0
-    for row in rows:
-        total_hours += (row.day1_hours + row.day2_hours + row.day3_hours + row.day4_hours + 
-                       row.day5_hours + row.day6_hours + row.day7_hours)
-    
-    hours_per_day = project.hours_per_day or 8.0
-    total_days = total_hours / hours_per_day if hours_per_day > 0 else 0
-    billable_amount = total_days * (project.day_rate or 0)
-    
-    import uuid
-    invoice_number = f"INV-{uuid.uuid4().hex[:8].upper()}"
-    
-    new_invoice = Invoice(
-        project_id=project_id,
-        invoice_number=invoice_number,
-        amount=billable_amount,
-        status="Draft"
-    )
-    db.add(new_invoice)
-    db.flush() # Get ID
-    
-    for row in rows:
-        row.invoice_id = new_invoice.id
-    
-    db.commit()
-    return RedirectResponse(url="/billing", status_code=303)
+    try:
+        ids = [int(rid) for rid in row_ids.split(",") if rid]
+        rows = db.query(TimesheetRow).filter(TimesheetRow.id.in_(ids)).order_by(TimesheetRow.week_start_date.asc()).all()
+        
+        if not rows:
+            return {"status": "error", "message": "No timesheet rows found"}
+        
+        print(f"DEBUG: Found {len(rows)} rows for invoice: {ids}")
+        
+        total_hours = 0
+        for row in rows:
+            print(f"DEBUG: Row {row.id} (Week {row.week_start_date}): {row.day1_hours}, {row.day2_hours}, {row.day3_hours}, {row.day4_hours}, {row.day5_hours}, {row.day6_hours}, {row.day7_hours}")
+            total_hours += (row.day1_hours + row.day2_hours + row.day3_hours + row.day4_hours + 
+                           row.day5_hours + row.day6_hours + row.day7_hours)
+        
+        hours_per_day = project.hours_per_day or 8.0
+        print(f"DEBUG: hours_per_day={hours_per_day}, project.day_rate={project.day_rate}")
+        total_days = total_hours / hours_per_day if hours_per_day > 0 else 0
+        billable_amount = total_days * (project.day_rate or 0)
+        print(f"DEBUG: billable_amount={billable_amount}")
+        
+        import uuid
+        invoice_uuid = uuid.uuid4().hex[:8].upper()
+        invoice_number = f"INV-{invoice_uuid}"
+        print(f"DEBUG: Generated invoice number {invoice_number}")
+        
+        new_invoice = Invoice(
+            project_id=project_id,
+            invoice_number=invoice_number,
+            amount=billable_amount,
+            status="Draft"
+        )
+        db.add(new_invoice)
+        db.flush() # Get ID
+        
+        for row in rows:
+            row.invoice_id = new_invoice.id
+        
+        db.commit()
+        print(f"DEBUG: DB committed for invoice {new_invoice.id}")
+        
+        # Render the invoice using the template from settings
+        settings = db.query(Settings).first()
+        invoice_template = ""
+        if settings and settings.invoice_template_file:
+            template_dir = "invoice templates"
+            template_path = os.path.join(template_dir, settings.invoice_template_file)
+            print(f"DEBUG: Using template {template_path}")
+            if os.path.exists(template_path):
+                with open(template_path, "r", encoding="utf-8") as f:
+                    invoice_template = f.read()
+            else:
+                print(f"DEBUG: Template file NOT FOUND at {template_path}")
+        
+        if not invoice_template:
+            print("DEBUG: Falling back to default 'No template found' HTML")
+            invoice_template = "<html><body><h1>No template found</h1><p>Please select a template in settings.</p></body></html>"
+        
+        # Prepare context for rendering
+        print("DEBUG: Preparing context")
+        client_address_lines = [line.strip() for line in project.address.split("\n") if line.strip()] if project.address else []
+        
+        project_desc = project.description.strip() if project.description and project.description.strip() else ""
+        if project_desc:
+            project_header = f"Project: {project.name}, {project_desc}"
+        else:
+            project_header = f"Project: {project.name}"
+        
+        line_items = []
+        for row in rows:
+            row_hours = (row.day1_hours + row.day2_hours + row.day3_hours + row.day4_hours + 
+                        row.day5_hours + row.day6_hours + row.day7_hours)
+            hours_per_day = project.hours_per_day or 8.0
+            row_days = row_hours / hours_per_day if hours_per_day > 0 else 0
+            row_amount = row_days * (row.day_rate or 0)
+            
+            # Format days to remove .0 if it's an integer
+            days_val = int(row_days) if row_days % 1 == 0 else round(row_days, 2)
+            
+            description = f"{days_val} days - Week commencing {row.week_start_date.strftime('%d %b %Y')}"
+            
+            line_items.append({
+                "description": description,
+                "amount": row_amount
+            })
+        
+        net_total = billable_amount
+        vat_total = net_total * 0.2 if project.uk_vat else 0.0
+        gross_total = net_total + vat_total
+        
+        invoice_date_obj = datetime.now()
+        invoice_date_str = invoice_date_obj.strftime("%d %b %Y")
+        
+        context = {
+            "invoice_number": invoice_number,
+            "invoice_date": invoice_date_str,
+            "client_name": project.client_name,
+            "client_address_lines": client_address_lines,
+            "your_reference": project.client_ref or "",
+            "project_header": project_header,
+            "line_items": line_items,
+            "net_total_gbp": net_total,
+            "vat_total_gbp": vat_total,
+            "gross_total_gbp": gross_total,
+            "uk_vat": project.uk_vat
+        }
+        
+        print("DEBUG: Rendering Jinja2 template")
+        rendered_invoice = Template(invoice_template).render(**context)
+        
+        # Generate PDF with Playwright
+        print("DEBUG: Starting PDF generation with Playwright")
+        output_dir = "Generated Invoices"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        # Filename: Levita-INV-[Number]-[Client]-[Date].pdf
+        filename_date = invoice_date_obj.strftime("%Y-%m-%d")
+        safe_client_name = "".join([c for c in project.client_name if c.isalnum() or c in (' ', '-', '_')]).strip().replace(' ', '-')
+        # Use invoice_uuid for filename to avoid duplicate INV-
+        pdf_filename = f"Levita-INV-{invoice_uuid}-{safe_client_name}-{filename_date}.pdf"
+        pdf_path = os.path.join(output_dir, pdf_filename)
+        
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            page = await browser.new_page()
+            
+            # Use absolute paths for local resources.
+            # Convert Windows backslashes to forward slashes for file:/// URLs
+            base_path = os.path.abspath(os.getcwd()).replace('\\', '/')
+            # Use 'file://' (two slashes) then the absolute path (starts with /C:/)
+            rendered_invoice = rendered_invoice.replace('/static/', f'file://{base_path}/static/')
+            
+            await page.goto(f'file://{base_path}/', wait_until="networkidle")
+            await page.set_content(rendered_invoice, wait_until="networkidle")
+            
+            # Set margins to 0 as requested ("you dont need any margins in the PDF as it looked good already")
+            await page.pdf(
+                path=pdf_path, 
+                format="A4", 
+                print_background=True,
+                margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
+                prefer_css_page_size=True
+            )
+            await browser.close()
+        
+        print(f"DEBUG: PDF successfully created at {pdf_path}")
+        
+        return {
+            "status": "success", 
+            "invoice_number": invoice_number,
+            "pdf_url": f"/invoices/{pdf_filename}"
+        }
+    except Exception as e:
+        import traceback
+        print("ERROR DURING INVOICE GENERATION:")
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+app.mount("/invoices", StaticFiles(directory="Generated Invoices"), name="invoices")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)

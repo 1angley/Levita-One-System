@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levita One - Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cta: '#0F766E',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+    <nav class="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200">
+        <div class="flex items-center space-x-4">
+            <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
+        </div>
+        <div class="flex items-center space-x-6">
+            <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
+                <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+                <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+                <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
+                <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+            </div>
+            
+            <!-- User Icon with Dropdown -->
+            <div class="relative inline-block text-left" id="user-menu-container">
+                <button type="button" class="flex items-center justify-center w-10 h-10 rounded-full bg-cta text-white font-bold text-sm focus:outline-none border-2 border-transparent hover:border-cta transition" id="user-menu-button">
+                    AL
+                </button>
+
+                <!-- Dropdown menu -->
+                <div class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" id="user-menu-dropdown">
+                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                        <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-bold" role="menuitem">Settings</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 py-10">
+        <h1 class="text-3xl font-extrabold text-black tracking-tight mb-8">Settings</h1>
+        
+        <form action="/settings" method="POST" class="space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-8 border border-gray-200">
+                <h2 class="text-lg font-bold mb-6 pb-2 border-b border-gray-100 uppercase tracking-widest text-gray-400">Invoice Configuration</h2>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Draft Invoice Email Address</label>
+                        <input type="email" name="draft_invoice_email" value="{{ settings.draft_invoice_email or '' }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black" placeholder="finance@example.com">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Email Invoice Template</label>
+                        <textarea name="email_invoice_template" rows="4" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black" placeholder="Dear {{ client_name }}, please find attached invoice...">{{ settings.email_invoice_template or '' }}</textarea>
+                        <p class="mt-1 text-xs text-gray-400 italic">This is used as the body text when sending invoices via email.</p>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest">Invoice Template File</label>
+                            <button type="button" onclick="previewTemplate()" class="text-[10px] font-bold text-cta hover:text-black uppercase tracking-widest border border-cta hover:border-black px-2 py-0.5 rounded transition">
+                                Preview Template
+                            </button>
+                        </div>
+                        <select id="invoice_template_file" name="invoice_template_file" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                            {% for template in available_templates %}
+                            <option value="{{ template }}" {% if settings.invoice_template_file == template %}selected{% endif %}>{{ template }}</option>
+                            {% endfor %}
+                            {% if not available_templates %}
+                            <option value="">No templates found in 'invoice templates' folder</option>
+                            {% endif %}
+                        </select>
+                        <p class="mt-1 text-xs text-gray-400 italic">Select a template from the 'invoice templates' folder.</p>
+                    </div>
+
+                    <div class="pt-6 border-t border-gray-100">
+                        <h2 class="text-lg font-bold mb-6 uppercase tracking-widest text-gray-400">Automation Settings</h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Invoice Generation Timing</label>
+                                <select name="invoice_generation_timing" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                                    <option value="Immediate" {% if settings.invoice_generation_timing == 'Immediate' %}selected{% endif %}>Immediate</option>
+                                    <option value="Batch" {% if settings.invoice_generation_timing == 'Batch' %}selected{% endif %}>Batch</option>
+                                </select>
+                                <p class="mt-1 text-xs text-gray-400 italic">When to produce invoices: instantly or during a scheduled batch.</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Batch Submission Time (24h)</label>
+                                <input type="time" name="batch_submission_time" value="{{ settings.batch_submission_time or '' }}" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
+                                <p class="mt-1 text-xs text-gray-400 italic">Scheduled time for batch timesheet submission and invoice generation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <button type="submit" class="bg-cta text-white px-12 py-3 rounded-lg font-bold hover:opacity-90 transition shadow-lg">
+                    Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const userMenuButton = document.getElementById('user-menu-button');
+        const userMenuDropdown = document.getElementById('user-menu-dropdown');
+
+        userMenuButton.addEventListener('click', () => {
+            userMenuDropdown.classList.toggle('hidden');
+        });
+
+        // Close the dropdown when clicking outside
+        window.addEventListener('click', (event) => {
+            if (!document.getElementById('user-menu-container').contains(event.target)) {
+                userMenuDropdown.classList.add('hidden');
+            }
+        });
+
+        function previewTemplate() {
+            const templateFile = document.getElementById('invoice_template_file').value;
+            if (!templateFile) {
+                alert('Please select a template file first');
+                return;
+            }
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/settings/invoice-preview';
+            form.target = '_blank';
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'invoice_template_file';
+            input.value = templateFile;
+            form.appendChild(input);
+
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        }
+    </script>
+</body>
+</html>
