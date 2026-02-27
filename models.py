@@ -101,6 +101,13 @@ class Settings(Base):
     # New settings
     invoice_generation_timing = Column(String, default="Immediate") # Immediate or Batch
     batch_submission_time = Column(String) # e.g., "17:00"
+    
+    # Gmail integration settings
+    gmail_credentials = Column(String) # JSON string for OAuth2 credentials
+    gmail_connection_status = Column(Boolean, default=False)
+    
+    # Invoice numbering
+    last_invoice_sequence = Column(Integer, default=1000)
 
 # Database setup
 DATABASE_URL = "sqlite:///timesheets.db"

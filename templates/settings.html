@@ -61,8 +61,19 @@
                     
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Email Invoice Template</label>
-                        <textarea name="email_invoice_template" rows="4" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black" placeholder="Dear {{ client_name }}, please find attached invoice...">{{ settings.email_invoice_template or '' }}</textarea>
-                        <p class="mt-1 text-xs text-gray-400 italic">This is used as the body text when sending invoices via email.</p>
+                        <textarea name="email_invoice_template" rows="4" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black" placeholder="Dear {{ contact_name }}, please find attached invoice {{ invoice_number }} for {{ gross_total }}...">{{ settings.email_invoice_template or '' }}</textarea>
+                        <p class="mt-1 text-xs text-gray-400 italic">This is used as the body text when creating draft invoices in Gmail.</p>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <span class="bg-gray-100 text-[10px] px-2 py-0.5 rounded text-gray-500 font-mono">{{ contact_name }}</span>
+                            <span class="bg-gray-100 text-[10px] px-2 py-0.5 rounded text-gray-500 font-mono">{{ client_name }}</span>
+                            <span class="bg-gray-100 text-[10px] px-2 py-0.5 rounded text-gray-500 font-mono">{{ project_name }}</span>
+                            <span class="bg-gray-100 text-[10px] px-2 py-0.5 rounded text-gray-500 font-mono">{{ invoice_number }}</span>
+                            <span class="bg-gray-100 text-[10px] px-2 py-0.5 rounded text-gray-500 font-mono">{{ invoice_date }}</span>
+                            <span class="bg-gray-100 text-[10px] px-2 py-0.5 rounded text-gray-500 font-mono">{{ net_total }}</span>
+                            <span class="bg-gray-100 text-[10px] px-2 py-0.5 rounded text-gray-500 font-mono">{{ vat_total }}</span>
+                            <span class="bg-gray-100 text-[10px] px-2 py-0.5 rounded text-gray-500 font-mono">{{ gross_total }}</span>
+                            <span class="bg-gray-100 text-[10px] px-2 py-0.5 rounded text-gray-500 font-mono">{{ client_ref }}</span>
+                        </div>
                     </div>
 
                     <div>
@@ -90,8 +101,8 @@
                             <div>
                                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Invoice Generation Timing</label>
                                 <select name="invoice_generation_timing" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">
-                                    <option value="Immediate" {% if settings.invoice_generation_timing == 'Immediate' %}selected{% endif %}>Immediate</option>
-                                    <option value="Batch" {% if settings.invoice_generation_timing == 'Batch' %}selected{% endif %}>Batch</option>
+                                    <option value="Immediate" {% if settings.invoice_generation_timing == "Immediate" %}selected{% endif %}>Immediate</option>
+                                    <option value="Batch" {% if settings.invoice_generation_timing == "Batch" %}selected{% endif %}>Batch</option>
                                 </select>
                                 <p class="mt-1 text-xs text-gray-400 italic">When to produce invoices: instantly or during a scheduled batch.</p>
                             </div>
@@ -102,6 +113,30 @@
                                 <p class="mt-1 text-xs text-gray-400 italic">Scheduled time for batch timesheet submission and invoice generation.</p>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-gray-100">
+                        <h2 class="text-lg font-bold mb-6 uppercase tracking-widest text-gray-400">Gmail Connection</h2>
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div>
+                                <p class="text-sm font-bold text-gray-900">Gmail Integration Status</p>
+                                <p class="text-xs text-gray-400">
+                                    {% if settings.gmail_connection_status %}
+                                    <span class="text-green-600 font-bold">● Connected</span> - Drafts will be created automatically.
+                                    {% else %}
+                                    <span class="text-red-500 font-bold">○ Not Connected</span> - Connect your Gmail to enable draft generation.
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div>
+                                {% if settings.gmail_connection_status %}
+                                <a href="/auth/google/disconnect" class="text-xs font-bold text-red-500 hover:underline uppercase tracking-widest">Disconnect</a>
+                                {% else %}
+                                <a href="/auth/google" class="bg-black text-white px-6 py-2 rounded-lg text-xs font-bold hover:opacity-90 transition shadow-sm">Connect Gmail</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <p class="mt-2 text-[10px] text-gray-400 italic leading-tight">By connecting, Levita One will be able to create draft emails in your Gmail account. This is required for the "Create Draft Invoice Email" project feature.</p>
                     </div>
                 </div>
             </div>

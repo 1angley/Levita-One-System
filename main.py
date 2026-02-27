@@ -6,11 +6,17 @@ from sqlalchemy.orm import Session
 from models import SessionLocal, Project, TimesheetRow, Invoice, Settings
 import uvicorn
 import os
+import json
 from datetime import datetime, timedelta
 from typing import List
 from pydantic import BaseModel
+from gmail_utils import get_gmail_service, create_draft_with_attachment, prepare_email_body
+from google_auth_oauthlib.flow import Flow
+
+from starlette.middleware.sessions import SessionMiddleware
 
 app = FastAPI(title="Levita One")
+app.add_middleware(SessionMiddleware, secret_key="a-very-secret-key") # In production use an env var
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -80,6 +86,78 @@ async def save_settings(
     settings.batch_submission_time = batch_submission_time
     db.commit()
     return RedirectResponse(url="/settings", status_code=303)
+
+@app.get("/auth/google")
+async def google_auth(request: Request, db: Session = Depends(get_db)):
+    # You need a client_secrets.json from Google Cloud Console
+    if not os.path.exists("client_secrets.json"):
+        return HTMLResponse("Error: client_secrets.json not found in project root. Please create it in Google Cloud Console with Gmail API enabled.", status_code=400)
+    
+    flow = Flow.from_client_secrets_file(
+        "client_secrets.json",
+        scopes=[
+            "https://www.googleapis.com/auth/gmail.compose",
+            "https://www.googleapis.com/auth/gmail.settings.basic"
+        ],
+        redirect_uri=str(request.url_for("google_auth_callback"))
+    )
+    
+    authorization_url, state = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt="consent"
+    )
+    
+    # Store state and code_verifier for PKCE in session
+    request.session["state"] = state
+    if hasattr(flow, "code_verifier"):
+        request.session["code_verifier"] = flow.code_verifier
+        
+    return RedirectResponse(authorization_url)
+
+@app.get("/auth/google/callback")
+async def google_auth_callback(request: Request, db: Session = Depends(get_db)):
+    state = request.query_params.get("state")
+    if state != request.session.get("state"):
+        return HTMLResponse("Error: State mismatch.", status_code=400)
+        
+    code = request.query_params.get("code")
+    
+    flow = Flow.from_client_secrets_file(
+        "client_secrets.json",
+        scopes=[
+            "https://www.googleapis.com/auth/gmail.compose",
+            "https://www.googleapis.com/auth/gmail.settings.basic"
+        ],
+        redirect_uri=str(request.url_for("google_auth_callback"))
+    )
+    
+    # Restore code_verifier for PKCE
+    if "code_verifier" in request.session:
+        flow.code_verifier = request.session["code_verifier"]
+    
+    flow.fetch_token(code=code)
+    creds = flow.credentials
+    
+    settings = db.query(Settings).first()
+    if not settings:
+        settings = Settings()
+        db.add(settings)
+    
+    settings.gmail_credentials = creds.to_json()
+    settings.gmail_connection_status = True
+    db.commit()
+    
+    return RedirectResponse(url="/settings")
+
+@app.get("/auth/google/disconnect")
+async def google_auth_disconnect(db: Session = Depends(get_db)):
+    settings = db.query(Settings).first()
+    if settings:
+        settings.gmail_credentials = None
+        settings.gmail_connection_status = False
+        db.commit()
+    return RedirectResponse(url="/settings")
 
 @app.post("/settings/invoice-preview")
 async def preview_invoice_template(invoice_template_file: str = Form(...)):
@@ -433,9 +511,25 @@ async def create_invoice(project_id: int = Form(...), row_ids: str = Form(...), 
         billable_amount = total_days * (project.day_rate or 0)
         print(f"DEBUG: billable_amount={billable_amount}")
         
-        import uuid
-        invoice_uuid = uuid.uuid4().hex[:8].upper()
-        invoice_number = f"INV-{invoice_uuid}"
+        # invoice_uuid = uuid.uuid4().hex[:8].upper()
+        # invoice_number = f"INV-{invoice_uuid}"
+        
+        # New numbering scheme: [Shortened Client Name (max 4 chars)][Number starting at 1001]
+        settings = db.query(Settings).first()
+        if not settings:
+            settings = Settings()
+            db.add(settings)
+            db.flush()
+        
+        if settings.last_invoice_sequence is None:
+            settings.last_invoice_sequence = 1000
+            
+        new_sequence = settings.last_invoice_sequence + 1
+        settings.last_invoice_sequence = new_sequence
+        
+        client_short = "".join([c for c in (project.client_name or "INV") if c.isalnum()]).upper()[:4]
+        invoice_number = f"{client_short}{new_sequence}"
+        
         print(f"DEBUG: Generated invoice number {invoice_number}")
         
         new_invoice = Invoice(
@@ -531,8 +625,8 @@ async def create_invoice(project_id: int = Form(...), row_ids: str = Form(...), 
         # Filename: Levita-INV-[Number]-[Client]-[Date].pdf
         filename_date = invoice_date_obj.strftime("%Y-%m-%d")
         safe_client_name = "".join([c for c in project.client_name if c.isalnum() or c in (' ', '-', '_')]).strip().replace(' ', '-')
-        # Use invoice_uuid for filename to avoid duplicate INV-
-        pdf_filename = f"Levita-INV-{invoice_uuid}-{safe_client_name}-{filename_date}.pdf"
+        # Use invoice_number for filename to avoid random UUIDs
+        pdf_filename = f"Levita-{invoice_number}-{safe_client_name}-{filename_date}.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
         
         async with async_playwright() as p:
@@ -563,6 +657,56 @@ async def create_invoice(project_id: int = Form(...), row_ids: str = Form(...), 
             await browser.close()
         
         print(f"DEBUG: PDF successfully created at {pdf_path}")
+
+        # Gmail Draft Creation
+        if project.create_draft_invoice_email:
+            print(f"DEBUG: Project {project.name} has create_draft_invoice_email=True.")
+            if settings and settings.gmail_connection_status:
+                try:
+                    print("DEBUG: Gmail is connected. Attempting to create draft.")
+                    service = get_gmail_service(settings.gmail_credentials)
+                    if service:
+                        sender = settings.draft_invoice_email
+                        recipient = project.key_contact_email
+                        
+                        if not sender or not recipient:
+                            print(f"DEBUG: Skipping draft creation. Sender or recipient missing. Sender: {sender}, Recipient: {recipient}")
+                        else:
+                            subject = f"Invoice {invoice_number} - {project.name}"
+                            
+                            template_str = settings.email_invoice_template or "Please find attached invoice {{ invoice_number }} for {{ project_name }}."
+                            body_text = prepare_email_body(
+                                template_str, 
+                                project, 
+                                invoice_number, 
+                                invoice_date_str,
+                                net_total, 
+                                vat_total, 
+                                gross_total
+                            )
+                            
+                            print(f"DEBUG: Calling create_draft_with_attachment with recipient='{recipient}' and sender='{sender}'")
+                            draft = create_draft_with_attachment(
+                                service, 
+                                sender, 
+                                recipient, 
+                                subject, 
+                                body_text, 
+                                pdf_path
+                            )
+                            if draft:
+                                print(f"DEBUG: Gmail draft created successfully with ID: {draft.get('id')}")
+                            else:
+                                print("DEBUG: create_draft_with_attachment returned None - Draft creation FAILED.")
+                        print("DEBUG: Gmail draft processing completed.")
+                    else:
+                        print("DEBUG: Failed to get Gmail service (credentials might be invalid).")
+                except Exception as ge:
+                    print(f"DEBUG: Error in Gmail draft flow: {ge}")
+            else:
+                print(f"DEBUG: Gmail NOT connected or settings missing. status={settings.gmail_connection_status if settings else 'N/A'}")
+        else:
+            print(f"DEBUG: Project {project.name} does NOT have create_draft_invoice_email enabled.")
         
         return {
             "status": "success", 

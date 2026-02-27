@@ -1,6 +1,20 @@
-# Kantata (Kimble) Timesheet Automation PoC
+# Levita One Timesheets
 
 This project contains a Proof of Concept (PoC) for automating timesheet entries on the Kantata Salesforce page.
+
+### Gmail Integration
+
+To use the draft email generation feature, you must provide your own Gmail API credentials.
+1. Go to the [Google Cloud Console](https://console.cloud.io/).
+2. Create a new project.
+3. Enable the **Gmail API**.
+4. Configure the **OAuth consent screen** (Internal or External).
+5. Add the scope `https://www.googleapis.com/auth/gmail.compose`.
+6. Create **OAuth 2.0 Client IDs** (Web application).
+   - Authorized redirect URI: `http://127.0.0.1:8000/auth/google/callback`
+7. Download the JSON file and rename it to `client_secrets.json`.
+8. Place `client_secrets.json` in the project root directory.
+9. Restart the app, go to Settings, and click **Connect Gmail**.
 
 ## Prerequisites
 
