@@ -133,6 +133,10 @@
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Address</label>
                         <textarea name="address" rows="3" class="mt-1 block w-full border border-gray-200 rounded-md p-2 focus:ring-black focus:border-black">{{ project.address or '' }}</textarea>
                     </div>
+                    <div class="flex items-center pt-2">
+                        <input type="checkbox" name="create_draft_invoice_email" id="create_draft_invoice_email_check" {% if project.create_draft_invoice_email %}checked{% endif %} class="w-5 h-5 text-black rounded focus:ring-black border-gray-300">
+                        <label for="create_draft_invoice_email_check" class="ml-3 block text-sm font-bold text-black uppercase tracking-widest">Create Draft Invoice Email</label>
+                    </div>
                 </div>
             </div>
 

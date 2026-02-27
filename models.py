@@ -28,6 +28,7 @@ class Project(Base):
     key_contact_email = Column(String)
     address = Column(String)
     description = Column(String)
+    create_draft_invoice_email = Column(Boolean, default=False)
     
     is_active = Column(Boolean, default=True)
     
@@ -83,6 +84,7 @@ class Invoice(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     amount = Column(Float)
     status = Column(String, default="Draft") # Draft, Sent, Paid
+    pdf_filename = Column(String)
     
     project = relationship("Project")
     timesheet_rows = relationship("TimesheetRow", back_populates="invoice")

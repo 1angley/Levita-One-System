@@ -116,6 +116,7 @@ async def add_project(
     key_contact_email: str = Form(None),
     address: str = Form(None),
     description: str = Form(None),
+    create_draft_invoice_email: bool = Form(False),
     is_active: bool = Form(True),
     db: Session = Depends(get_db)
 ):
@@ -134,6 +135,7 @@ async def add_project(
         key_contact_email=key_contact_email,
         address=address,
         description=description,
+        create_draft_invoice_email=create_draft_invoice_email,
         is_active=is_active
     )
     db.add(new_project)
@@ -157,6 +159,7 @@ async def update_project(
     key_contact_email: str = Form(None),
     address: str = Form(None),
     description: str = Form(None),
+    create_draft_invoice_email: bool = Form(False),
     is_active: bool = Form(False),
     db: Session = Depends(get_db)
 ):
@@ -176,6 +179,7 @@ async def update_project(
         project.key_contact_email = key_contact_email
         project.address = address
         project.description = description
+        project.create_draft_invoice_email = create_draft_invoice_email
         project.is_active = is_active
         db.commit()
     return RedirectResponse(url="/projects", status_code=303)
@@ -325,6 +329,7 @@ async def billing_page(request: Request, month: str = None, week: str = None, vi
         total_hours = 0
         project_row_ids = []
         has_invoice = False
+        pdf_filename = None
         
         # Calculate hours for this project in this period
         for row in saved_rows:
@@ -332,6 +337,9 @@ async def billing_page(request: Request, month: str = None, week: str = None, vi
                 project_row_ids.append(row.id)
                 if row.invoice_id:
                     has_invoice = True
+                    # Fetch the PDF filename if not already found
+                    if not pdf_filename and row.invoice:
+                        pdf_filename = row.invoice.pdf_filename
                 # Iterate through each day of the week
                 for i in range(7):
                     day_date = row.week_start_date + timedelta(days=i)
@@ -362,7 +370,8 @@ async def billing_page(request: Request, month: str = None, week: str = None, vi
             "agreed_display": agreed_display,
             "billable_amount": billable_amount,
             "row_ids": ",".join(map(str, project_row_ids)),
-            "has_invoice": has_invoice
+            "has_invoice": has_invoice,
+            "pdf_url": f"/invoices/{pdf_filename}" if pdf_filename else None
         })
     
     # Calendar view data (still monthly for context, or we could change it)
@@ -547,6 +556,10 @@ async def create_invoice(project_id: int = Form(...), row_ids: str = Form(...), 
                 margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
                 prefer_css_page_size=True
             )
+            new_invoice.pdf_filename = pdf_filename
+            db.commit()
+            print(f"DEBUG: Invoice record updated with pdf_filename: {pdf_filename}")
+            
             await browser.close()
         
         print(f"DEBUG: PDF successfully created at {pdf_path}")

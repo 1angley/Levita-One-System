@@ -164,7 +164,14 @@
                             <div class="p-4 text-center flex items-center justify-center">
                                 {% if item.total_hours > 0 %}
                                     {% if item.has_invoice %}
-                                        <span class="text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-2 py-1 rounded">Invoiced</span>
+                                        <div class="flex flex-col items-center space-y-1">
+                                            <span class="text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-2 py-1 rounded">Invoiced</span>
+                                            {% if item.pdf_url %}
+                                            <a href="{{ item.pdf_url }}" target="_blank" class="text-[10px] font-bold text-cta hover:underline uppercase tracking-widest">
+                                                Open PDF
+                                            </a>
+                                            {% endif %}
+                                        </div>
                                     {% else %}
                                         <div id="invoice-action-{{ item.project.id }}">
                                             <button onclick="createInvoice('{{ item.project.id }}', '{{ item.row_ids }}')" class="bg-cta text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-black transition uppercase tracking-widest">

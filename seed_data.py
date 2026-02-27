@@ -38,7 +38,8 @@ def seed():
             "uk_vat": True,
             "key_contact": "Nigel Fish",
             "key_contact_email": "nigel.fish@soci.org, invoices@soci.org",
-            "address": "14/15 Belgrave Square, London, SW1X 8PB"
+            "address": "14/15 Belgrave Square, London, SW1X 8PB",
+            "create_draft_invoice_email": True
         },
         {
             "name": "Startup Work",
