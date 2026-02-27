@@ -18,8 +18,11 @@ def seed():
 
     # Seed default settings
     settings = Settings(
+        draft_invoice_email="alex@levita.co.uk",
+        email_invoice_template="Hello {{ contact_name }}\n\nPlease find attached the latest invoice for the Project {{ project_name }}, {{ client_ref }}\n\nany issues please do let me know.\n\nThanks\nAlex",
         invoice_template_file="default.html",
-        invoice_generation_timing="Immediate"
+        invoice_generation_timing="Immediate",
+        last_invoice_sequence=1001
     )
     session.add(settings)
     print("Default settings seeded (template: default.html).")

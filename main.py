@@ -189,7 +189,7 @@ async def add_project(
     client_ref: str = Form(None),
     agreed_days: float = Form(0.0),
     days_cycle_unit: str = Form("Week"),
-    uk_vat: bool = Form(True),
+    uk_vat: bool = Form(False),
     key_contact: str = Form(None),
     key_contact_email: str = Form(None),
     address: str = Form(None),
@@ -232,7 +232,7 @@ async def update_project(
     client_ref: str = Form(None),
     agreed_days: float = Form(0.0),
     days_cycle_unit: str = Form("Week"),
-    uk_vat: bool = Form(True),
+    uk_vat: bool = Form(False),
     key_contact: str = Form(None),
     key_contact_email: str = Form(None),
     address: str = Form(None),
@@ -490,6 +490,11 @@ async def create_invoice(project_id: int = Form(...), row_ids: str = Form(...), 
     if not project:
         return {"status": "error", "message": "Project not found"}
     
+    settings = db.query(Settings).first()
+    if project.create_draft_invoice_email:
+        if not settings or not settings.gmail_connection_status:
+            return {"status": "error", "message": "Gmail is not connected. Please connect your Gmail account in Settings to generate the invoice and create the email draft."}
+    
     try:
         ids = [int(rid) for rid in row_ids.split(",") if rid]
         rows = db.query(TimesheetRow).filter(TimesheetRow.id.in_(ids)).order_by(TimesheetRow.week_start_date.asc()).all()
@@ -515,7 +520,6 @@ async def create_invoice(project_id: int = Form(...), row_ids: str = Form(...), 
         # invoice_number = f"INV-{invoice_uuid}"
         
         # New numbering scheme: [Shortened Client Name (max 4 chars)][Number starting at 1001]
-        settings = db.query(Settings).first()
         if not settings:
             settings = Settings()
             db.add(settings)
@@ -548,7 +552,6 @@ async def create_invoice(project_id: int = Form(...), row_ids: str = Form(...), 
         print(f"DEBUG: DB committed for invoice {new_invoice.id}")
         
         # Render the invoice using the template from settings
-        settings = db.query(Settings).first()
         invoice_template = ""
         if settings and settings.invoice_template_file:
             template_dir = "invoice templates"
