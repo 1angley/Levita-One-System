@@ -2,6 +2,7 @@ import os
 import base64
 import json
 import pickle
+from typing import List
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -15,7 +16,8 @@ from jinja2 import Template
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.compose',
-    'https://www.googleapis.com/auth/gmail.settings.basic'
+    'https://www.googleapis.com/auth/gmail.settings.basic',
+    'https://www.googleapis.com/auth/gmail.readonly'
 ]
 
 def get_gmail_service(credentials_json):
@@ -144,3 +146,47 @@ def prepare_email_body(template_str, project, invoice_number, invoice_date, net_
     except Exception as e:
         print(f"Error rendering email template: {e}")
         return template_str
+
+def get_contact_messages(service, emails: List[str]):
+    """Fetches recent messages involving any of the provided email addresses."""
+    if not service or not emails:
+        return []
+    
+    try:
+        # Join emails with OR for searching
+        query = " OR ".join([f"from:{e} OR to:{e}" for e in emails])
+        print(f"DEBUG: Gmail SEARCH Query: {query}")
+        
+        # Use request with timeout if possible (googleapiclient has some options but not direct timeout)
+        # We'll at least log where we are
+        print("DEBUG: Executing users().messages().list...")
+        results = service.users().messages().list(userId='me', q=query, maxResults=20).execute()
+        messages = results.get('messages', [])
+        print(f"DEBUG: Found {len(messages)} potential messages.")
+        
+        full_messages = []
+        for msg in messages:
+            print(f"DEBUG: Fetching details for message ID: {msg['id']}")
+            m = service.users().messages().get(userId='me', id=msg['id'], format='metadata', 
+                                              metadataHeaders=['Subject', 'From', 'Date']).execute()
+            
+            headers = m.get('payload', {}).get('headers', [])
+            subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '(No Subject)')
+            sender = next((h['value'] for h in headers if h['name'] == 'From'), '(Unknown Sender)')
+            date = next((h['value'] for h in headers if h['name'] == 'Date'), '(Unknown Date)')
+            
+            snippet = m.get('snippet', '')
+            
+            full_messages.append({
+                'id': msg['id'],
+                'subject': subject,
+                'from': sender,
+                'date': date,
+                'snippet': snippet,
+                'threadId': m.get('threadId')
+            })
+        print("DEBUG: Completed fetching message details.")
+        return full_messages
+    except Exception as e:
+        print(f"Error fetching Gmail messages: {e}")
+        return []

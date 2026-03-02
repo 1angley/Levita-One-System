@@ -28,6 +28,7 @@
                 <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
                 <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
                 <a href="/projects" class="font-bold text-black border-b-2 border-black pb-1">Engagements</a>
+                <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
             </div>
             
             <!-- User Icon with Dropdown -->
@@ -235,6 +236,14 @@
             const modal = document.getElementById(id);
             modal.classList.toggle('hidden');
         }
+
+        // Check for modal trigger in URL
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('modal') === 'add') {
+                toggleModal('add-modal');
+            }
+        });
     </script>
 </body>
 </html>

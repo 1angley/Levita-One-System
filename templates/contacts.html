@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levita One - Contacts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cta: '#0F766E',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+    <nav class="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200">
+        <div class="flex items-center space-x-4">
+            <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
+        </div>
+        <div class="flex items-center space-x-6">
+            <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
+                <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+                <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+                <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
+                <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+                <a href="/contacts" class="font-bold text-black border-b-2 border-black pb-1">Contacts</a>
+            </div>
+            
+            <div class="relative inline-block text-left" id="user-menu-container">
+                <button type="button" class="flex items-center justify-center w-10 h-10 rounded-full bg-cta text-white font-bold text-sm focus:outline-none border-2 border-transparent hover:border-cta transition" id="user-menu-button">
+                    AL
+                </button>
+                <div class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" id="user-menu-dropdown">
+                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                        <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-bold" role="menuitem">Settings</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 py-10">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-extrabold text-black tracking-tight">CRM - Contacts & Companies</h1>
+            <div class="flex space-x-4">
+                <button onclick="toggleModal('company-modal')" class="bg-white text-black border border-gray-200 px-6 py-2 rounded-lg hover:bg-gray-50 transition shadow-sm font-bold">
+                    + New Company
+                </button>
+                <button onclick="toggleModal('contact-modal')" class="bg-cta text-white px-6 py-2 rounded-lg hover:opacity-90 transition shadow-sm font-bold">
+                    + New Contact
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Contacts Table -->
+            <div class="lg:col-span-2">
+                <h2 class="text-xl font-bold text-black mb-4 flex items-center uppercase tracking-widest text-sm">
+                    <span class="w-2 h-2 bg-black rounded-full mr-2"></span>
+                    Contacts
+                </h2>
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Company</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Tags</th>
+                                <th class="px-6 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white">
+                            {% for contact in contacts %}
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <a href="/contacts/{{ contact.id }}/detail" class="font-bold text-black hover:text-cta transition">{{ contact.name }}</a>
+                                    <div class="text-xs text-gray-500">{{ contact.current_email }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                    {{ contact.company.name if contact.company else 'None' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for tag in contact.tags %}
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-wider">
+                                            {{ tag.name }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <a href="/contacts/{{ contact.id }}/detail" class="text-cta hover:text-black font-bold">View</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="px-6 py-10 text-center text-gray-400 italic text-sm">No contacts found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Companies Sidebar -->
+            <div class="lg:col-span-1">
+                <h2 class="text-xl font-bold text-black mb-4 flex items-center uppercase tracking-widest text-sm">
+                    <span class="w-2 h-2 bg-cta rounded-full mr-2"></span>
+                    Companies
+                </h2>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <ul class="divide-y divide-gray-100">
+                        {% for company in companies %}
+                        <li class="px-6 py-4 hover:bg-gray-50 transition flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-black">{{ company.name }}</div>
+                                <div class="text-xs text-gray-500">{{ company.contacts|length }} Contacts</div>
+                            </div>
+                            <button onclick="editCompany('{{ company.id }}', '{{ company.name }}')" class="text-gray-400 hover:text-black">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                            </button>
+                        </li>
+                        {% else %}
+                        <li class="px-6 py-10 text-center text-gray-400 italic text-sm">No companies found.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Company Modal -->
+    <div id="company-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-xl font-bold text-black" id="company-modal-title">Add New Company</h3>
+                <button onclick="toggleModal('company-modal')" class="text-gray-400 hover:text-black transition">&times;</button>
+            </div>
+            <form action="/companies" method="POST" id="company-form">
+                <input type="hidden" name="company_id" id="edit-company-id">
+                <div class="p-8 space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Company Name</label>
+                        <input type="text" name="name" id="company-name" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end space-x-4">
+                    <button type="button" onclick="toggleModal('company-modal')" class="px-6 py-2 text-gray-500 font-bold hover:text-black transition">Cancel</button>
+                    <button type="submit" class="bg-cta text-white px-8 py-2 rounded-xl font-bold hover:opacity-90 transition shadow-lg">Save Company</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contact Modal -->
+    <div id="contact-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-xl font-bold text-black" id="contact-modal-title">Add New Contact</h3>
+                <button onclick="toggleModal('contact-modal')" class="text-gray-400 hover:text-black transition">&times;</button>
+            </div>
+            <form action="/contacts" method="POST" id="contact-form">
+                <input type="hidden" name="contact_id" id="edit-contact-id">
+                <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Full Name</label>
+                        <input type="text" name="name" id="contact-name" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Current Company</label>
+                        <select name="company_id" id="contact-company" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                            <option value="">None</option>
+                            {% for company in companies %}
+                            <option value="{{ company.id }}">{{ company.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Current Email</label>
+                        <input type="email" name="current_email" id="contact-email" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Mobile Number</label>
+                        <input type="text" name="mobile_number" id="contact-mobile" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">LinkedIn Profile URL</label>
+                        <input type="url" name="linkedin_profile_url" id="contact-linkedin" placeholder="https://linkedin.com/in/..." class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Tags</label>
+                        <div class="flex flex-wrap gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            {% for tag in tags %}
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" name="tags" value="{{ tag.name }}" class="contact-tag-checkbox w-4 h-4 text-cta border-gray-300 rounded focus:ring-cta">
+                                <span class="text-sm font-bold text-gray-500 group-hover:text-black transition">{{ tag.name }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Historical Emails (Comma separated)</label>
+                        <textarea name="historical_emails" id="contact-historical" rows="2" placeholder="old1@company.com, old2@other.com" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium"></textarea>
+                        <p class="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">These will be used for future Gmail API searches.</p>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end space-x-4">
+                    <button type="button" onclick="toggleModal('contact-modal')" class="px-6 py-2 text-gray-500 font-bold hover:text-black transition">Cancel</button>
+                    <button type="submit" class="bg-cta text-white px-8 py-2 rounded-xl font-bold hover:opacity-90 transition shadow-lg">Save Contact</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+            if (modal.classList.contains('hidden')) {
+                // Reset forms on close
+                if (id === 'company-modal') {
+                    document.getElementById('company-form').reset();
+                    document.getElementById('edit-company-id').value = '';
+                    document.getElementById('company-modal-title').innerText = 'Add New Company';
+                }
+                if (id === 'contact-modal') {
+                    document.getElementById('contact-form').reset();
+                    document.getElementById('edit-contact-id').value = '';
+                    document.getElementById('contact-modal-title').innerText = 'Add New Contact';
+                }
+            }
+        }
+
+        function editCompany(id, name) {
+            document.getElementById('edit-company-id').value = id;
+            document.getElementById('company-name').value = name;
+            document.getElementById('company-modal-title').innerText = 'Edit Company';
+            toggleModal('company-modal');
+        }
+
+        async function editContact(id) {
+            const response = await fetch(`/contacts/${id}`);
+            const contact = await response.json();
+            
+            document.getElementById('edit-contact-id').value = contact.id;
+            document.getElementById('contact-name').value = contact.name;
+            document.getElementById('contact-company').value = contact.company_id || '';
+            document.getElementById('contact-email').value = contact.current_email || '';
+            document.getElementById('contact-mobile').value = contact.mobile_number || '';
+            document.getElementById('contact-linkedin').value = contact.linkedin_profile_url || '';
+            document.getElementById('contact-historical').value = contact.historical_emails.join(', ');
+            
+            // Set tags
+            const checkboxes = document.querySelectorAll('.contact-tag-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = contact.tags.includes(cb.value);
+            });
+
+            document.getElementById('contact-modal-title').innerText = 'Edit Contact';
+            toggleModal('contact-modal');
+        }
+
+        const userMenuButton = document.getElementById('user-menu-button');
+        const userMenuDropdown = document.getElementById('user-menu-dropdown');
+        userMenuButton.addEventListener('click', () => userMenuDropdown.classList.toggle('hidden'));
+        window.addEventListener('click', (event) => {
+            if (!document.getElementById('user-menu-container').contains(event.target)) {
+                userMenuDropdown.classList.add('hidden');
+            }
+        });
+
+        // Check for modal trigger in URL
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('modal') === 'contact') {
+                toggleModal('contact-modal');
+            } else if (urlParams.get('modal') === 'company') {
+                toggleModal('company-modal');
+            }
+        });
+    </script>
+</body>
+</html>

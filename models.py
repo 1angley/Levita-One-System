@@ -1,9 +1,70 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey, Boolean, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey, Boolean, DateTime, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 import datetime
 
 Base = declarative_base()
+
+# Many-to-Many relationship between Contact and Tag
+contact_tags = Table('contact_tags', Base.metadata,
+    Column('contact_id', Integer, ForeignKey('contacts.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('tags.id'), primary_key=True)
+)
+
+class Company(Base):
+    """A company with associated contacts."""
+    __tablename__ = 'companies'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, unique=True)
+    
+    contacts = relationship("Contact", back_populates="company")
+
+class Contact(Base):
+    """A person with CRM details."""
+    __tablename__ = 'contacts'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    linkedin_profile_url = Column(String)
+    mobile_number = Column(String)
+    current_email = Column(String)
+    company_id = Column(Integer, ForeignKey('companies.id'))
+    
+    company = relationship("Company", back_populates="contacts")
+    historical_emails = relationship("HistoricalEmail", back_populates="contact")
+    tags = relationship("Tag", secondary=contact_tags, back_populates="contacts")
+    notes = relationship("Note", back_populates="contact", cascade="all, delete-orphan")
+
+class HistoricalEmail(Base):
+    """Historical email addresses for a contact."""
+    __tablename__ = 'historical_emails'
+    
+    id = Column(Integer, primary_key=True)
+    email = Column(String, nullable=False)
+    contact_id = Column(Integer, ForeignKey('contacts.id'))
+    
+    contact = relationship("Contact", back_populates="historical_emails")
+
+class Note(Base):
+    """Manual notes for a contact."""
+    __tablename__ = 'notes'
+    
+    id = Column(Integer, primary_key=True)
+    content = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.now)
+    contact_id = Column(Integer, ForeignKey('contacts.id'))
+    
+    contact = relationship("Contact", back_populates="notes")
+
+class Tag(Base):
+    """Tags for categorizing contacts."""
+    __tablename__ = 'tags'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, unique=True)
+    
+    contacts = relationship("Contact", secondary=contact_tags, back_populates="tags")
 
 class Project(Base):
     """The 'Target' for time entries (e.g., Client name, Internal code)."""

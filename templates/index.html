@@ -28,6 +28,7 @@
                 <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
                 <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
                 <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+                <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
             </div>
             
             <!-- User Icon with Dropdown -->
@@ -46,23 +47,91 @@
         </div>
     </nav>
 
-    <div class="flex-grow flex flex-col items-center justify-center py-20">
-        <div class="max-w-2xl text-center px-6">
-            <img src="/static/logo.png" alt="Levita One" class="h-48 mx-auto mb-8">
-            <p class="text-xl text-gray-600 mb-10 leading-relaxed">
-                Your single source of truth for timesheets. Bridge the gap between your local records and third-party systems like Salesforce Kantata.
-            </p>
+    <div class="flex-grow flex flex-col items-center py-20 bg-gray-50">
+        <div class="max-w-6xl w-full px-6">
+            <div class="flex items-center justify-between mb-16">
+                <div>
+                    <h1 class="text-4xl font-extrabold text-black tracking-tight mb-2">Dashboard</h1>
+                    <p class="text-gray-500">Welcome back to Levita One. Here's what's happening today.</p>
+                </div>
+                <img src="/static/logo.png" alt="Levita One" class="h-20">
+            </div>
             
-            <div class="space-y-4 md:space-y-0 md:space-x-4 flex flex-col md:flex-row justify-center">
-                <a href="/projects" class="inline-block bg-cta hover:opacity-90 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105">
-                    Manage Engagements
-                </a>
-                <a href="/timesheets" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-4 px-8 rounded-lg shadow-md border border-gray-200 transform transition hover:scale-105">
-                    Weekly Timesheet
-                </a>
-                <a href="/billing" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-4 px-8 rounded-lg shadow-md border border-gray-200 transform transition hover:scale-105">
-                    Billing
-                </a>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <!-- Contact Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col">
+                    <a href="/contacts" class="inline-block bg-cta hover:opacity-90 text-white font-bold py-3 px-4 rounded-xl shadow-md text-center mb-6 transition transform hover:scale-105">
+                        Contact
+                    </a>
+                    <div class="flex-grow space-y-3">
+                        <a href="/contacts?modal=contact" class="block text-sm font-semibold text-gray-700 hover:text-cta transition flex items-center">
+                            <span class="w-1.5 h-1.5 bg-cta rounded-full mr-2"></span>
+                            Create new contact
+                        </a>
+                        <a href="/contacts" class="block text-sm font-semibold text-gray-700 hover:text-cta transition flex items-center">
+                            <span class="w-1.5 h-1.5 bg-cta rounded-full mr-2"></span>
+                            Create new email
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Opportunity Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col">
+                    <a href="/opportunities" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-3 px-4 rounded-xl shadow-md border border-gray-200 text-center mb-6 transition transform hover:scale-105">
+                        Opportunity
+                    </a>
+                    <div class="flex-grow space-y-3">
+                        <div class="text-sm font-bold text-black flex items-center">
+                            <span class="w-1.5 h-1.5 bg-black rounded-full mr-2"></span>
+                            {{ live_opportunities_count }} Live Opportunities
+                        </div>
+                        <a href="/opportunities?modal=new" class="block text-sm font-semibold text-gray-600 hover:text-black transition flex items-center">
+                            <span class="w-1.5 h-1.5 bg-gray-300 rounded-full mr-2"></span>
+                            Create new opportunity
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Engagement Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col">
+                    <a href="/projects" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-3 px-4 rounded-xl shadow-md border border-gray-200 text-center mb-6 transition transform hover:scale-105">
+                        Engagement
+                    </a>
+                    <div class="flex-grow space-y-3">
+                        <div class="text-sm font-bold text-black flex items-center">
+                            <span class="w-1.5 h-1.5 bg-black rounded-full mr-2"></span>
+                            {{ live_engagements_count }} live engagements
+                        </div>
+                        <a href="/projects?modal=add" class="block text-sm font-semibold text-gray-600 hover:text-black transition flex items-center">
+                            <span class="w-1.5 h-1.5 bg-gray-300 rounded-full mr-2"></span>
+                            Create new engagement
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Timesheet Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col">
+                    <a href="/timesheets" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-3 px-4 rounded-xl shadow-md border border-gray-200 text-center mb-6 transition transform hover:scale-105">
+                        Timesheet
+                    </a>
+                    <div class="flex-grow space-y-3">
+                        <a href="/timesheets" class="block text-sm font-semibold text-gray-600 hover:text-black transition flex items-center">
+                            <span class="w-1.5 h-1.5 bg-gray-300 rounded-full mr-2"></span>
+                            Create new time entry
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Billing Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col">
+                    <a href="/billing" class="inline-block bg-white hover:bg-gray-50 text-black font-bold py-3 px-4 rounded-xl shadow-md border border-gray-200 text-center mb-6 transition transform hover:scale-105">
+                        Billing
+                    </a>
+                    <div class="flex-grow">
+                        <!-- Placeholder for billing content -->
+                        <p class="text-xs text-gray-400 italic">Manage your invoices and payments.</p>
+                    </div>
+                </div>
             </div>
 
             <div class="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-left">

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levita One - {{ contact.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cta: '#0F766E',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+    <nav class="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200">
+        <div class="flex items-center space-x-4">
+            <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
+        </div>
+        <div class="flex items-center space-x-6">
+            <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
+                <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+                <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+                <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
+                <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+                <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
+            </div>
+            
+            <div class="relative inline-block text-left" id="user-menu-container">
+                <button type="button" class="flex items-center justify-center w-10 h-10 rounded-full bg-cta text-white font-bold text-sm focus:outline-none border-2 border-transparent hover:border-cta transition" id="user-menu-button">
+                    AL
+                </button>
+                <div class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" id="user-menu-dropdown">
+                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                        <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-bold" role="menuitem">Settings</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-10">
+        <div class="mb-8 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="/contacts" class="text-gray-400 hover:text-black transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </a>
+                <h1 class="text-3xl font-extrabold text-black tracking-tight">{{ contact.name }}</h1>
+            </div>
+            <button onclick="toggleModal('contact-modal')" class="bg-white text-black border border-gray-200 px-6 py-2 rounded-lg hover:bg-gray-50 transition shadow-sm font-bold">
+                Edit Contact
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Details -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Contact Details</h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Current Company</label>
+                            <div class="font-bold text-black text-lg">{{ contact.company.name if contact.company else 'None' }}</div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Email Address</label>
+                            <a href="mailto:{{ contact.current_email }}" class="font-bold text-cta hover:underline">{{ contact.current_email or 'Not set' }}</a>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Mobile Number</label>
+                            <div class="font-bold text-black">{{ contact.mobile_number or 'Not set' }}</div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">LinkedIn Profile</label>
+                            {% if contact.linkedin_profile_url %}
+                            <a href="{{ contact.linkedin_profile_url }}" target="_blank" class="font-bold text-cta hover:underline break-all">{{ contact.linkedin_profile_url }}</a>
+                            {% else %}
+                            <div class="text-gray-400 italic">Not set</div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Tags</label>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                {% for tag in contact.tags %}
+                                <span class="px-3 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-wider">
+                                    {{ tag.name }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {% if contact.historical_emails %}
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Historical Emails</label>
+                            <div class="space-y-1">
+                                {% for he in contact.historical_emails %}
+                                <div class="text-sm text-gray-600">{{ he.email }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Activity Panel -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
+                    <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Activity & Conversations</h2>
+                        <button onclick="toggleModal('note-modal')" class="bg-cta text-white px-4 py-2 rounded-lg hover:opacity-90 transition shadow-sm font-bold text-sm">
+                            + New Note
+                        </button>
+                    </div>
+                    
+                    <div class="p-8 space-y-8 max-h-[800px] overflow-y-auto">
+                        <!-- Activity Feed -->
+                        
+                        {% if not gmail_activity and not notes %}
+                        <div class="text-center py-20 text-gray-400 italic">
+                            No activity found for this contact.
+                        </div>
+                        {% endif %}
+
+                        <!-- Combined Feed (Notes + Gmail) -->
+                        {% set items = [] %}
+                        {% for note in notes %}
+                            {% do items.append({'type': 'note', 'date': note.timestamp, 'content': note.content, 'obj': note}) %}
+                        {% endfor %}
+                        
+                        <!-- For now we just list them separately or sort if possible. Gmail dates are strings though -->
+                        
+                        <!-- Manual Notes Section -->
+                        {% if notes %}
+                        <div class="space-y-4">
+                            <h3 class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Manual Notes</h3>
+                            {% for note in notes %}
+                            <div class="bg-yellow-50/50 border border-yellow-100 rounded-xl p-6 relative">
+                                <div class="text-xs text-yellow-600 font-bold mb-2 uppercase tracking-tighter">
+                                    {{ note.timestamp.strftime('%d %b %Y %H:%M') }}
+                                </div>
+                                <div class="text-gray-800 whitespace-pre-wrap">{{ note.content }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Gmail Activity Section -->
+                        {% if gmail_activity %}
+                        <div class="space-y-4">
+                            <h3 class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Gmail Conversations</h3>
+                            {% for msg in gmail_activity %}
+                            <div class="bg-white border border-gray-100 rounded-xl p-6 hover:border-cta/30 transition group">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="text-xs text-gray-400 font-bold uppercase tracking-tighter">{{ msg.date }}</div>
+                                    <div class="text-[10px] bg-gray-50 text-gray-400 px-2 py-0.5 rounded font-bold">GMAIL</div>
+                                </div>
+                                <div class="font-bold text-black mb-1 group-hover:text-cta transition">{{ msg.subject }}</div>
+                                <div class="text-xs text-gray-500 mb-3">From: {{ msg.from }}</div>
+                                <div class="text-sm text-gray-600 line-clamp-2 italic">"{{ msg.snippet }}..."</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% elif settings and settings.gmail_connection_status %}
+                         <!-- Gmail connected but no messages found -->
+                        {% elif not settings or not settings.gmail_connection_status %}
+                        <div class="bg-gray-50 rounded-xl p-6 border border-dashed border-gray-200 text-center">
+                            <div class="text-xs font-bold text-gray-400 uppercase mb-2">Gmail API Not Connected</div>
+                            <p class="text-sm text-gray-500 mb-4">Connect your Gmail in settings to see email history here.</p>
+                            <a href="/settings" class="text-cta font-bold text-xs hover:underline uppercase tracking-widest">Go to Settings →</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Modal -->
+    <div id="note-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-xl font-bold text-black">New Note</h3>
+                <button onclick="toggleModal('note-modal')" class="text-gray-400 hover:text-black transition">&times;</button>
+            </div>
+            <form action="/contacts/{{ contact.id }}/notes" method="POST">
+                <div class="p-8">
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Note Content</label>
+                    <textarea name="content" rows="5" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium" placeholder="Type your note here..."></textarea>
+                </div>
+                <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end space-x-4">
+                    <button type="button" onclick="toggleModal('note-modal')" class="px-6 py-2 text-gray-500 font-bold hover:text-black transition">Cancel</button>
+                    <button type="submit" class="bg-cta text-white px-8 py-2 rounded-xl font-bold hover:opacity-90 transition shadow-lg">Save Note</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contact Modal (for editing) -->
+    <div id="contact-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-xl font-bold text-black">Edit Contact</h3>
+                <button onclick="toggleModal('contact-modal')" class="text-gray-400 hover:text-black transition">&times;</button>
+            </div>
+            <form action="/contacts" method="POST" id="contact-form">
+                <input type="hidden" name="contact_id" value="{{ contact.id }}">
+                <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Full Name</label>
+                        <input type="text" name="name" value="{{ contact.name }}" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Current Company</label>
+                        <select name="company_id" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                            <option value="">None</option>
+                            {% for company in companies %}
+                            <option value="{{ company.id }}" {% if contact.company_id == company.id %}selected{% endif %}>{{ company.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Current Email</label>
+                        <input type="email" name="current_email" value="{{ contact.current_email or '' }}" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Mobile Number</label>
+                        <input type="text" name="mobile_number" value="{{ contact.mobile_number or '' }}" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">LinkedIn Profile URL</label>
+                        <input type="url" name="linkedin_profile_url" value="{{ contact.linkedin_profile_url or '' }}" placeholder="https://linkedin.com/in/..." class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Tags</label>
+                        <div class="flex flex-wrap gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            {% set contact_tag_names = contact.tags | map(attribute='name') | list %}
+                            {% for tag in all_tags %}
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" name="tags" value="{{ tag.name }}" {% if tag.name in contact_tag_names %}checked{% endif %} class="w-4 h-4 text-cta border-gray-300 rounded focus:ring-cta">
+                                <span class="text-sm font-bold text-gray-500 group-hover:text-black transition">{{ tag.name }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Historical Emails (Comma separated)</label>
+                        <textarea name="historical_emails" rows="2" placeholder="old1@company.com, old2@other.com" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">{% for he in contact.historical_emails %}{{ he.email }}{{ ", " if not loop.last }}{% endfor %}</textarea>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end space-x-4">
+                    <button type="button" onclick="toggleModal('contact-modal')" class="px-6 py-2 text-gray-500 font-bold hover:text-black transition">Cancel</button>
+                    <button type="submit" class="bg-cta text-white px-8 py-2 rounded-xl font-bold hover:opacity-90 transition shadow-lg">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        const userMenuButton = document.getElementById('user-menu-button');
+        const userMenuDropdown = document.getElementById('user-menu-dropdown');
+        userMenuButton.addEventListener('click', () => userMenuDropdown.classList.toggle('hidden'));
+        window.addEventListener('click', (event) => {
+            if (!document.getElementById('user-menu-container').contains(event.target)) {
+                userMenuDropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

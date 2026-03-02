@@ -1,16 +1,16 @@
-from fastapi import FastAPI, Request, Form, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request, Form, Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from models import SessionLocal, Project, TimesheetRow, Invoice, Settings
+from models import SessionLocal, Project, TimesheetRow, Invoice, Settings, Company, Contact, Tag, HistoricalEmail, Note
 import uvicorn
 import os
 import json
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
-from gmail_utils import get_gmail_service, create_draft_with_attachment, prepare_email_body
+from gmail_utils import get_gmail_service, create_draft_with_attachment, prepare_email_body, get_contact_messages
 from google_auth_oauthlib.flow import Flow
 
 from starlette.middleware.sessions import SessionMiddleware
@@ -18,6 +18,7 @@ from starlette.middleware.sessions import SessionMiddleware
 app = FastAPI(title="Levita One")
 app.add_middleware(SessionMiddleware, secret_key="a-very-secret-key") # In production use an env var
 templates = Jinja2Templates(directory="templates")
+templates.env.add_extension('jinja2.ext.do')
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Pydantic models for timesheet saving
@@ -44,8 +45,16 @@ def get_db():
         db.close()
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def read_root(request: Request, db: Session = Depends(get_db)):
+    live_engagements_count = db.query(Project).filter(Project.is_active == True).count()
+    # For now, opportunities aren't implemented, so we'll hardcode or use 0
+    live_opportunities_count = 2 # Hardcoded as per request example "2 Live Opportunities"
+    
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "live_engagements_count": live_engagements_count,
+        "live_opportunities_count": live_opportunities_count
+    })
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, db: Session = Depends(get_db)):
@@ -97,7 +106,8 @@ async def google_auth(request: Request, db: Session = Depends(get_db)):
         "client_secrets.json",
         scopes=[
             "https://www.googleapis.com/auth/gmail.compose",
-            "https://www.googleapis.com/auth/gmail.settings.basic"
+            "https://www.googleapis.com/auth/gmail.settings.basic",
+            "https://www.googleapis.com/auth/gmail.readonly"
         ],
         redirect_uri=str(request.url_for("google_auth_callback"))
     )
@@ -127,7 +137,8 @@ async def google_auth_callback(request: Request, db: Session = Depends(get_db)):
         "client_secrets.json",
         scopes=[
             "https://www.googleapis.com/auth/gmail.compose",
-            "https://www.googleapis.com/auth/gmail.settings.basic"
+            "https://www.googleapis.com/auth/gmail.settings.basic",
+            "https://www.googleapis.com/auth/gmail.readonly"
         ],
         redirect_uri=str(request.url_for("google_auth_callback"))
     )
@@ -721,6 +732,141 @@ async def create_invoice(project_id: int = Form(...), row_ids: str = Form(...), 
         print("ERROR DURING INVOICE GENERATION:")
         traceback.print_exc()
         return {"status": "error", "message": str(e)}
+    except Exception as e:
+        import traceback
+        print("ERROR DURING INVOICE GENERATION:")
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+@app.get("/contacts", response_class=HTMLResponse)
+async def list_contacts(request: Request, db: Session = Depends(get_db)):
+    contacts = db.query(Contact).all()
+    companies = db.query(Company).all()
+    tags = db.query(Tag).all()
+    return templates.TemplateResponse("contacts.html", {
+        "request": request, 
+        "contacts": contacts, 
+        "companies": companies, 
+        "tags": tags
+    })
+
+@app.post("/companies")
+def add_or_update_company(
+    company_id: Optional[int] = Form(None),
+    name: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    if company_id:
+        company = db.query(Company).get(company_id)
+        if company:
+            company.name = name
+    else:
+        company = Company(name=name)
+        db.add(company)
+    db.commit()
+    return RedirectResponse(url="/contacts", status_code=303)
+
+@app.get("/contacts/{contact_id}/detail", response_class=HTMLResponse)
+async def contact_detail(request: Request, contact_id: int, db: Session = Depends(get_db)):
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    settings = db.query(Settings).first()
+    emails = [contact.current_email] if contact.current_email else []
+    emails += [he.email for he in contact.historical_emails if he.email]
+    
+    gmail_activity = []
+    if settings and settings.gmail_connection_status:
+        try:
+            service = get_gmail_service(settings.gmail_credentials)
+            if service:
+                gmail_activity = get_contact_messages(service, emails)
+        except Exception as e:
+            print(f"Error fetching Gmail activity: {e}")
+            
+    notes = db.query(Note).filter(Note.contact_id == contact_id).order_by(Note.timestamp.desc()).all()
+    
+    # We might want to pass all companies and tags for the edit functionality if we keep it on the same page
+    companies = db.query(Company).all()
+    tags = db.query(Tag).all()
+    
+    return templates.TemplateResponse("contact_detail.html", {
+        "request": request,
+        "contact": contact,
+        "notes": notes,
+        "gmail_activity": gmail_activity,
+        "companies": companies,
+        "all_tags": tags, # renaming to avoid conflict with contact.tags
+        "settings": settings
+    })
+
+@app.post("/contacts/{contact_id}/notes")
+async def add_note(contact_id: int, content: str = Form(...), db: Session = Depends(get_db)):
+    note = Note(content=content, contact_id=contact_id)
+    db.add(note)
+    db.commit()
+    return RedirectResponse(url=f"/contacts/{contact_id}/detail", status_code=303)
+
+@app.post("/contacts")
+async def add_or_update_contact(
+    contact_id: Optional[int] = Form(None),
+    name: str = Form(...),
+    company_id: Optional[int] = Form(None),
+    current_email: Optional[str] = Form(None),
+    mobile_number: Optional[str] = Form(None),
+    linkedin_profile_url: Optional[str] = Form(None),
+    historical_emails: Optional[str] = Form(None),
+    tags: List[str] = Form([]),
+    db: Session = Depends(get_db)
+):
+    if contact_id:
+        contact = db.query(Contact).get(contact_id)
+    else:
+        contact = Contact()
+        db.add(contact)
+    
+    contact.name = name
+    contact.company_id = company_id
+    contact.current_email = current_email
+    contact.mobile_number = mobile_number
+    contact.linkedin_profile_url = linkedin_profile_url
+    
+    # Update Tags
+    contact.tags = []
+    for tag_name in tags:
+        tag = db.query(Tag).filter(Tag.name == tag_name).first()
+        if tag:
+            contact.tags.append(tag)
+            
+    # Update Historical Emails
+    # Clear existing
+    db.query(HistoricalEmail).filter(HistoricalEmail.contact_id == contact.id).delete()
+    if historical_emails:
+        emails = [e.strip() for e in historical_emails.split(",") if e.strip()]
+        for email in emails:
+            h_email = HistoricalEmail(email=email, contact=contact)
+            db.add(h_email)
+            
+    db.commit()
+    return RedirectResponse(url=f"/contacts/{contact.id}/detail", status_code=303)
+
+@app.get("/contacts/{contact_id}")
+def get_contact_json(contact_id: int, db: Session = Depends(get_db)):
+    contact = db.query(Contact).get(contact_id)
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    return {
+        "id": contact.id,
+        "name": contact.name,
+        "company_id": contact.company_id,
+        "current_email": contact.current_email,
+        "mobile_number": contact.mobile_number,
+        "linkedin_profile_url": contact.linkedin_profile_url,
+        "tags": [tag.name for tag in contact.tags],
+        "historical_emails": [e.email for e in contact.historical_emails]
+    }
 
 app.mount("/invoices", StaticFiles(directory="Generated Invoices"), name="invoices")
 

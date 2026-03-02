@@ -1,5 +1,6 @@
-from models import SessionLocal, Project, Settings, init_db
+from models import SessionLocal, Project, Settings, Tag, Company, Contact, Note, init_db
 import os
+import datetime
 
 def seed():
     # Attempt to delete existing DB to start fresh with new schema
@@ -16,6 +17,13 @@ def seed():
     
     session = SessionLocal()
 
+    # Seed starter tags
+    starter_tags = ["Recruiter", "Supplier/Agency", "NED Recruiter", "Worked with"]
+    for tag_name in starter_tags:
+        tag = Tag(name=tag_name)
+        session.add(tag)
+    print(f"Starter tags seeded: {', '.join(starter_tags)}.")
+
     # Seed default settings
     settings = Settings(
         draft_invoice_email="alex@levita.co.uk",
@@ -26,6 +34,26 @@ def seed():
     )
     session.add(settings)
     print("Default settings seeded (template: default.html).")
+    
+    # Seed a Company and Contact
+    company = Company(name="Test Corp")
+    session.add(company)
+    session.flush()
+    
+    contact = Contact(
+        name="John Doe", 
+        current_email="john@testcorp.com", 
+        company_id=company.id,
+        mobile_number="07700 900000",
+        linkedin_profile_url="https://www.linkedin.com/in/johndoe"
+    )
+    session.add(contact)
+    session.flush()
+    
+    # Add a Note
+    note = Note(content="Initial contact made via LinkedIn.", contact_id=contact.id)
+    session.add(note)
+    print("Test company, contact, and note seeded.")
     
     projects_data = [
         {
