@@ -12,6 +12,8 @@ from typing import List, Optional
 from pydantic import BaseModel
 from gmail_utils import get_gmail_service, create_draft_with_attachment, prepare_email_body, get_contact_messages
 from google_auth_oauthlib.flow import Flow
+from timesheet_automation import TimesheetAutomation
+import asyncio
 
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -358,6 +360,65 @@ async def submit_timesheet(data: TimesheetSubmit, db: Session = Depends(get_db))
     if row:
         row.status = "Pending"
         db.commit()
+        
+        # Trigger automation in the background
+        hours = [
+            row.day1_hours, row.day2_hours, row.day3_hours,
+            row.day4_hours, row.day5_hours, row.day6_hours, row.day7_hours
+        ]
+        
+        async def run_automation():
+            try:
+                print(f"DEBUG: Starting automation for week {week_start} with hours {hours}", flush=True)
+                # We can determine headless mode from an environment variable or setting
+                is_headless = os.getenv("PLAYWRIGHT_HEADLESS", "false").lower() == "true"
+                automation = TimesheetAutomation(headless=is_headless)
+                
+                # Fetch project details for the activity_type
+                db_project = SessionLocal()
+                activity_type = None
+                try:
+                    project = db_project.query(Project).filter(Project.id == data.project_id).first()
+                    if project:
+                        activity_type = project.salesforce_code or project.name
+                finally:
+                    db_project.close()
+
+                success = await automation.run_sync(week_start, hours, activity_type=activity_type)
+                print(f"DEBUG: Automation finished with success={success}", flush=True)
+                
+                # Update status in DB
+                db_status = SessionLocal()
+                try:
+                    row_to_update = db_status.query(TimesheetRow).filter(
+                        TimesheetRow.project_id == data.project_id,
+                        TimesheetRow.week_start_date == week_start
+                    ).first()
+                    if row_to_update:
+                        row_to_update.status = "Synced" if success else "Failed"
+                        db_status.commit()
+                finally:
+                    db_status.close()
+            except Exception as e:
+                print(f"ERROR: Automation failed: {e}", flush=True)
+                import traceback
+                traceback.print_exc()
+                
+                # Update status to Failed
+                db_status = SessionLocal()
+                try:
+                    row_to_update = db_status.query(TimesheetRow).filter(
+                        TimesheetRow.project_id == data.project_id,
+                        TimesheetRow.week_start_date == week_start
+                    ).first()
+                    if row_to_update:
+                        row_to_update.status = "Failed"
+                        db_status.commit()
+                finally:
+                    db_status.close()
+        
+        asyncio.create_task(run_automation())
+        
         return {"status": "success"}
     return {"status": "error", "message": "Timesheet row not found"}
 
@@ -871,4 +932,7 @@ def get_contact_json(contact_id: int, db: Session = Depends(get_db)):
 app.mount("/invoices", StaticFiles(directory="Generated Invoices"), name="invoices")
 
 if __name__ == "__main__":
+    # Ensure logs are visible
+    import logging
+    logging.basicConfig(level=logging.INFO)
     uvicorn.run(app, host="127.0.0.1", port=8000)

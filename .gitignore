@@ -23,5 +23,6 @@ env.bak/
 venv.bak/
 
 # Project-specific secrets and output
+auth.json
 client_secrets.json
 Generated Invoices/

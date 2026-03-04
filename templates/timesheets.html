@@ -52,7 +52,7 @@
 
     <div class="max-w-7xl mx-auto px-4 py-10">
         <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-extrabold text-black tracking-tight">Weekly Timesheet</h1>
+            <h1 class="text-3xl font-extrabold text-black tracking-tight">Weekly Timesheet: {{ week_dates[0].strftime('%d %b %Y') }}</h1>
             <div class="flex items-center space-x-6">
                 <div class="flex flex-col items-end">
                     <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Timesheet Status</span>
@@ -117,7 +117,8 @@
                         {% if project.timesheet_system == 'Salesforce' %}
                         <div class="mt-2 flex items-center space-x-2 {% if not saved_row %}hidden{% endif %}" id="submit-container-{{ project.id }}">
                             <button onclick="submitTimesheet(this, {{ project.id }})" 
-                                    class="text-[10px] bg-cta text-white px-2 py-1 rounded font-bold uppercase tracking-wider hover:opacity-80 transition">
+                                    id="submit-btn-{{ project.id }}"
+                                    class="text-[10px] bg-cta text-white px-2 py-1 rounded font-bold uppercase tracking-wider hover:opacity-80 transition disabled:bg-gray-400">
                                 Submit
                             </button>
                             <span id="status-{{ project.id }}" class="text-[10px] font-bold uppercase tracking-widest text-cta">
@@ -302,6 +303,9 @@
         }
 
         async function submitTimesheet(btn, projectId) {
+            btn.disabled = true;
+            btn.innerText = '...';
+            
             const payload = {
                 project_id: projectId,
                 week_start: "{{ current_monday }}"
@@ -321,13 +325,17 @@
                     if (statusSpan) {
                         statusSpan.innerText = 'Pending';
                     }
-                    alert('Timesheet submitted to Salesforce (Pending)');
+                    alert('Automation triggered. The status will update to "Synced" once complete. (Refresh page to see updates)');
                 } else {
                     alert('Error submitting timesheet.');
+                    btn.disabled = false;
+                    btn.innerText = 'Submit';
                 }
             } catch (error) {
                 console.error('Error:', error);
                 alert('An error occurred during submission.');
+                btn.disabled = false;
+                btn.innerText = 'Submit';
             }
         }
 
