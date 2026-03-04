@@ -29,12 +29,15 @@ class Contact(Base):
     linkedin_profile_url = Column(String)
     mobile_number = Column(String)
     current_email = Column(String)
+    role = Column(String)
+    comments = Column(String)
     company_id = Column(Integer, ForeignKey('companies.id'))
     
     company = relationship("Company", back_populates="contacts")
     historical_emails = relationship("HistoricalEmail", back_populates="contact")
     tags = relationship("Tag", secondary=contact_tags, back_populates="contacts")
     notes = relationship("Note", back_populates="contact", cascade="all, delete-orphan")
+    opportunities = relationship("Opportunity", back_populates="contact")
 
 class HistoricalEmail(Base):
     """Historical email addresses for a contact."""
@@ -134,6 +137,34 @@ class TimesheetRow(Base):
     
     project = relationship("Project")
     invoice = relationship("Invoice", back_populates="timesheet_rows")
+
+class Opportunity(Base):
+    """An opportunity for a new contract."""
+    __tablename__ = 'opportunities'
+    
+    id = Column(Integer, primary_key=True)
+    client_name = Column(String, nullable=False)
+    stage = Column(String, nullable=False) # e.g., "Initial Chat / Idea", etc.
+    day_rate = Column(Float)
+    contract_value = Column(Float)
+    contract_type = Column(String) # e.g., "Outside IR35 Day Rate", etc.
+    
+    contact_id = Column(Integer, ForeignKey('contacts.id'))
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    
+    contact = relationship("Contact", back_populates="opportunities")
+    notes = relationship("OpportunityNote", back_populates="opportunity", cascade="all, delete-orphan")
+
+class OpportunityNote(Base):
+    """Notes specific to an opportunity."""
+    __tablename__ = 'opportunity_notes'
+    
+    id = Column(Integer, primary_key=True)
+    content = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.now)
+    opportunity_id = Column(Integer, ForeignKey('opportunities.id'))
+    
+    opportunity = relationship("Opportunity", back_populates="notes")
 
 class Invoice(Base):
     """An invoice generated for one or more timesheet rows."""

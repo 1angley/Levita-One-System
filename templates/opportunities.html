@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levita One - Opportunities</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cta: '#0F766E',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+    <nav class="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200">
+        <div class="flex items-center space-x-4">
+            <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
+        </div>
+        <div class="flex items-center space-x-6">
+            <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
+                <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+                <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
+                <a href="/opportunities" class="font-bold text-black border-b-2 border-black pb-1">Opportunities</a>
+                <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+                <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+                <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
+            </div>
+            
+            <div class="relative inline-block text-left" id="user-menu-container">
+                <button type="button" class="flex items-center justify-center w-10 h-10 rounded-full bg-cta text-white font-bold text-sm focus:outline-none border-2 border-transparent hover:border-cta transition" id="user-menu-button">
+                    AL
+                </button>
+                <div class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" id="user-menu-dropdown">
+                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                        <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-bold" role="menuitem">Settings</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 py-10">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-extrabold text-black tracking-tight">Opportunities</h1>
+            <button onclick="toggleModal('opportunity-modal')" class="bg-cta text-white px-6 py-2 rounded-lg hover:opacity-90 transition shadow-sm font-bold">
+                + New Opportunity
+            </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Client</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Stage</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Contact</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Contract Type</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Value / Rate</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    {% for opp in opportunities %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="/opportunities/{{ opp.id }}" class="font-bold text-black hover:text-cta transition">{{ opp.client_name }}</a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 rounded-full text-[10px] font-bold {% if opp.stage == 'Won' %}bg-green-100 text-green-700{% elif opp.stage == 'Lost' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %} uppercase tracking-wider">
+                                {{ opp.stage }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {{ opp.contact.name if opp.contact else 'N/A' }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {{ opp.contract_type }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right font-bold text-black">
+                            {% if opp.contract_value %}
+                                £{{ "{:,.2f}".format(opp.contract_value) }}
+                            {% elif opp.day_rate %}
+                                £{{ "{:,.2f}".format(opp.day_rate) }}/day
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="/opportunities/{{ opp.id }}" class="text-cta hover:text-black font-bold">View</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-10 text-center text-gray-400 italic text-sm">No opportunities found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Opportunity Modal -->
+    <div id="opportunity-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 id="modal-title" class="text-xl font-bold text-black">New Opportunity</h2>
+                <button onclick="toggleModal('opportunity-modal')" class="text-gray-400 hover:text-black">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form action="/opportunities/add" method="POST" class="p-8">
+                <input type="hidden" name="opportunity_id" id="form-opp-id">
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Client Name</label>
+                        <input type="text" name="client_name" id="form-client-name" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Stage</label>
+                        <select name="stage" id="form-stage" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-bold">
+                            <option value="Initial Chat / Idea">Initial Chat / Idea</option>
+                            <option value="Qualified Opportunity / Put Forward">Qualified Opportunity / Put Forward</option>
+                            <option value="Proposal / Interview">Proposal / Interview</option>
+                            <option value="Negotiation / Offer">Negotiation / Offer</option>
+                            <option value="Won">Won</option>
+                            <option value="Lost">Lost</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Contract Type</label>
+                        <select name="contract_type" id="form-contract-type" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-bold">
+                            <option value="Outside IR35 Day Rate">Outside IR35 Day Rate</option>
+                            <option value="Inside IR35 Day Rate">Inside IR35 Day Rate</option>
+                            <option value="Fixed Price">Fixed Price</option>
+                            <option value="T&M">T&M</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Day Rate (£)</label>
+                        <input type="number" step="0.01" name="day_rate" id="form-day-rate" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Contract Value (£)</label>
+                        <input type="number" step="0.01" name="contract_value" id="form-contract-value" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-bold">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Contact</label>
+                        <select name="contact_id" id="form-contact-id" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-bold">
+                            <option value="">None</option>
+                            {% for contact in contacts %}
+                            <option value="{{ contact.id }}">{{ contact.name }} ({{ contact.company.name if contact.company else 'N/A' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" class="bg-cta text-white px-10 py-3 rounded-lg font-bold hover:opacity-90 transition shadow-lg">
+                        Save Opportunity
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        const userMenuButton = document.getElementById('user-menu-button');
+        const userMenuDropdown = document.getElementById('user-menu-dropdown');
+
+        userMenuButton.addEventListener('click', () => {
+            userMenuDropdown.classList.toggle('hidden');
+        });
+
+        window.addEventListener('click', (event) => {
+            if (!document.getElementById('user-menu-container').contains(event.target)) {
+                userMenuDropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

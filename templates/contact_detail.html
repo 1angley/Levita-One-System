@@ -25,10 +25,11 @@
         <div class="flex items-center space-x-6">
             <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
                 <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+                <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
+                <a href="/opportunities" class="text-gray-500 hover:text-black transition">Opportunities</a>
+                <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
                 <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
                 <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
-                <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
-                <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
             </div>
             
             <div class="relative inline-block text-left" id="user-menu-container">
@@ -67,6 +68,11 @@
                     
                     <div class="space-y-6">
                         <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Function / Role</label>
+                            <div class="font-bold text-black">{{ contact.role or 'Not set' }}</div>
+                        </div>
+
+                        <div>
                             <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Current Company</label>
                             <div class="font-bold text-black text-lg">{{ contact.company.name if contact.company else 'None' }}</div>
                         </div>
@@ -91,6 +97,11 @@
                         </div>
 
                         <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Internal Comments</label>
+                            <div class="text-sm text-gray-600 whitespace-pre-wrap">{{ contact.comments or 'No comments added.' }}</div>
+                        </div>
+
+                        <div>
                             <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Tags</label>
                             <div class="flex flex-wrap gap-2 mt-2">
                                 {% for tag in contact.tags %}
@@ -111,6 +122,40 @@
                             </div>
                         </div>
                         {% endif %}
+                    </div>
+                </div>
+
+                <!-- Opportunities Panel -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Opportunities</h2>
+                        <a href="/opportunities" class="text-[10px] font-bold text-cta hover:underline uppercase tracking-widest">View All</a>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        {% if opportunities %}
+                            {% for opp in opportunities %}
+                            <a href="/opportunities/{{ opp.id }}" class="block p-4 rounded-xl border border-gray-100 hover:border-cta/30 hover:bg-gray-50 transition group">
+                                <div class="font-bold text-black group-hover:text-cta transition mb-1">{{ opp.client_name }}</div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500 uppercase tracking-tighter">{{ opp.stage }}</span>
+                                    {% if opp.day_rate %}
+                                    <span class="text-xs font-bold text-gray-900">£{{ "{:,.2f}".format(opp.day_rate) }}/d</span>
+                                    {% elif opp.contract_value %}
+                                    <span class="text-xs font-bold text-gray-900">£{{ "{:,.2f}".format(opp.contract_value) }}</span>
+                                    {% endif %}
+                                </div>
+                            </a>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-6 text-gray-400 italic text-sm border border-dashed border-gray-200 rounded-xl">
+                                No active opportunities found (Debug: list empty).
+                            </div>
+                        {% endif %}
+                        
+                        <a href="/opportunities" class="block w-full text-center py-3 rounded-xl border border-dashed border-gray-300 text-gray-400 font-bold text-xs hover:border-cta hover:text-cta transition uppercase tracking-widest mt-4">
+                            + New Opportunity
+                        </a>
                     </div>
                 </div>
             </div>
@@ -223,6 +268,10 @@
                         <input type="text" name="name" value="{{ contact.name }}" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Function / Role</label>
+                        <input type="text" name="role" value="{{ contact.role or '' }}" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Current Company</label>
                         <select name="company_id" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
                             <option value="">None</option>
@@ -242,6 +291,10 @@
                     <div class="md:col-span-2">
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">LinkedIn Profile URL</label>
                         <input type="url" name="linkedin_profile_url" value="{{ contact.linkedin_profile_url or '' }}" placeholder="https://linkedin.com/in/..." class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Internal Comments</label>
+                        <textarea name="comments" rows="3" placeholder="Private internal notes about this contact..." class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">{{ contact.comments or '' }}</textarea>
                     </div>
                     <div class="md:col-span-2">
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Tags</label>

@@ -2,8 +2,8 @@ from fastapi import FastAPI, Request, Form, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session
-from models import SessionLocal, Project, TimesheetRow, Invoice, Settings, Company, Contact, Tag, HistoricalEmail, Note
+from sqlalchemy.orm import Session, joinedload
+from models import SessionLocal, Project, TimesheetRow, Invoice, Settings, Company, Contact, Tag, HistoricalEmail, Note, Opportunity, OpportunityNote
 import uvicorn
 import os
 import json
@@ -49,8 +49,7 @@ def get_db():
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, db: Session = Depends(get_db)):
     live_engagements_count = db.query(Project).filter(Project.is_active == True).count()
-    # For now, opportunities aren't implemented, so we'll hardcode or use 0
-    live_opportunities_count = 2 # Hardcoded as per request example "2 Live Opportunities"
+    live_opportunities_count = db.query(Opportunity).filter(Opportunity.stage != "Lost", Opportunity.stage != "Won").count()
     
     return templates.TemplateResponse("index.html", {
         "request": request,
@@ -848,6 +847,30 @@ async def contact_detail(request: Request, contact_id: int, db: Session = Depend
             
     notes = db.query(Note).filter(Note.contact_id == contact_id).order_by(Note.timestamp.desc()).all()
     
+    # Debug print to see if opportunities are found
+    opportunities = db.query(Opportunity).filter(Opportunity.contact_id == contact_id).all()
+    
+    # If no opportunities found via contact_id, try finding by name as fallback for debug
+    if not opportunities:
+         opportunities = db.query(Opportunity).filter(Opportunity.client_name == contact.name).all()
+         if opportunities:
+             print(f"DEBUG: Found {len(opportunities)} opportunities by NAME fallback for {contact.name}")
+    
+    print(f"DEBUG: Found {len(opportunities)} opportunities for contact {contact_id}")
+    for opp in opportunities:
+        print(f"DEBUG: Opp ID: {opp.id}, Client: {opp.client_name}, Contact ID: {opp.contact_id}")
+    
+    # Check specifically for Alex Langley
+    if "Langley" in contact.name:
+        all_opps = db.query(Opportunity).all()
+        print(f"DEBUG: TOTAL OPPORTUNITIES IN DB: {len(all_opps)}")
+        for o in all_opps:
+            print(f"DEBUG: Global Opp ID: {o.id}, Client: {o.client_name}, Contact ID: {o.contact_id}")
+            # If we find Bauer but it has different ID, let's fix it
+            if o.client_name == "Bauer" and o.contact_id != contact_id:
+                 print(f"DEBUG: Found Bauer with WRONG contact_id: {o.contact_id}. EXPECTED: {contact_id}")
+                 # o.contact_id = contact_id # We won't auto-fix yet without user confirmation, but we'll know.
+    
     # We might want to pass all companies and tags for the edit functionality if we keep it on the same page
     companies = db.query(Company).all()
     tags = db.query(Tag).all()
@@ -856,6 +879,7 @@ async def contact_detail(request: Request, contact_id: int, db: Session = Depend
         "request": request,
         "contact": contact,
         "notes": notes,
+        "opportunities": opportunities,
         "gmail_activity": gmail_activity,
         "companies": companies,
         "all_tags": tags, # renaming to avoid conflict with contact.tags
@@ -876,7 +900,9 @@ async def add_or_update_contact(
     company_id: Optional[int] = Form(None),
     current_email: Optional[str] = Form(None),
     mobile_number: Optional[str] = Form(None),
+    role: Optional[str] = Form(None),
     linkedin_profile_url: Optional[str] = Form(None),
+    comments: Optional[str] = Form(None),
     historical_emails: Optional[str] = Form(None),
     tags: List[str] = Form([]),
     db: Session = Depends(get_db)
@@ -891,7 +917,9 @@ async def add_or_update_contact(
     contact.company_id = company_id
     contact.current_email = current_email
     contact.mobile_number = mobile_number
+    contact.role = role
     contact.linkedin_profile_url = linkedin_profile_url
+    contact.comments = comments
     
     # Update Tags
     contact.tags = []
@@ -923,11 +951,134 @@ def get_contact_json(contact_id: int, db: Session = Depends(get_db)):
         "name": contact.name,
         "company_id": contact.company_id,
         "current_email": contact.current_email,
+        "role": contact.role,
         "mobile_number": contact.mobile_number,
         "linkedin_profile_url": contact.linkedin_profile_url,
+        "comments": contact.comments,
         "tags": [tag.name for tag in contact.tags],
         "historical_emails": [e.email for e in contact.historical_emails]
     }
+
+# --- Opportunity Routes ---
+
+@app.get("/opportunities", response_class=HTMLResponse)
+async def list_opportunities(request: Request, db: Session = Depends(get_db)):
+    opportunities = db.query(Opportunity).all()
+    contacts = db.query(Contact).all()
+    return templates.TemplateResponse("opportunities.html", {
+        "request": request,
+        "opportunities": opportunities,
+        "contacts": contacts
+    })
+
+@app.post("/opportunities/add")
+async def add_opportunity(
+    client_name: str = Form(...),
+    stage: str = Form(...),
+    day_rate: float = Form(None),
+    contract_value: float = Form(None),
+    contract_type: str = Form(None),
+    contact_id: int = Form(None),
+    opportunity_id: Optional[int] = Form(None),
+    db: Session = Depends(get_db)
+):
+    if opportunity_id:
+        opp = db.query(Opportunity).get(opportunity_id)
+    else:
+        opp = Opportunity()
+        db.add(opp)
+    
+    opp.client_name = client_name
+    opp.stage = stage
+    opp.day_rate = day_rate
+    opp.contract_value = contract_value
+    opp.contract_type = contract_type
+    opp.contact_id = contact_id if contact_id else None
+    
+    db.commit()
+    return RedirectResponse(url="/opportunities", status_code=303)
+
+@app.get("/opportunities/{opp_id}", response_class=HTMLResponse)
+async def opportunity_detail(opp_id: int, request: Request, db: Session = Depends(get_db)):
+    opp = db.query(Opportunity).options(
+        joinedload(Opportunity.contact).joinedload(Contact.tags),
+        joinedload(Opportunity.contact).joinedload(Contact.historical_emails)
+    ).filter(Opportunity.id == opp_id).first()
+    
+    if not opp:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+    
+    activities = []
+    
+    # 1. Opportunity Notes
+    for note in opp.notes:
+        activities.append({
+            "type": "note",
+            "content": note.content,
+            "timestamp": note.timestamp
+        })
+    
+    # 2. Contact Emails & Notes
+    settings = db.query(Settings).first()
+    contact_notes = []
+    if opp.contact:
+        # Include contact notes in activities? 
+        # The user wants "separate Activity list that includes all emails for the contact selected 
+        # but also notes that are specific to the opportunity"
+        # Wait, the previous solution said "logic to combine Gmail messages and manual notes into a single activity feed".
+        # Let's see how contact_detail does it. It separates them in the template.
+        # But opportunity_detail.html uses a single activity feed.
+        
+        # Get emails from Gmail if connected
+        if settings and settings.gmail_connection_status:
+            try:
+                from gmail_utils import get_gmail_service, get_contact_messages
+                service = get_gmail_service(settings.gmail_credentials)
+                if service:
+                    emails = [opp.contact.current_email] if opp.contact.current_email else []
+                    emails += [he.email for he in opp.contact.historical_emails if he.email]
+                    gmail_activity = get_contact_messages(service, emails)
+                    for msg in gmail_activity:
+                        activities.append({
+                            "type": "email",
+                            "content": f"Subject: {msg.get('subject', 'No Subject')}\n{msg.get('snippet', '')}",
+                            "timestamp": msg.get('date')
+                        })
+            except Exception as e:
+                print(f"Error fetching Gmail activity: {e}")
+
+    def get_ts(x):
+        ts = x.get('timestamp')
+        if isinstance(ts, str):
+            try:
+                from dateutil import parser
+                return parser.parse(ts)
+            except:
+                return datetime.min
+        return ts if ts else datetime.min
+
+    activities.sort(key=get_ts, reverse=True)
+    
+    # Fetch data needed for edit modals if we want them here
+    companies = db.query(Company).all()
+    all_tags = db.query(Tag).all()
+
+    return templates.TemplateResponse("opportunity_detail.html", {
+        "request": request,
+        "opportunity": opp,
+        "contact": opp.contact,
+        "activities": activities,
+        "companies": companies,
+        "all_tags": all_tags,
+        "settings": settings
+    })
+
+@app.post("/opportunities/{opp_id}/note")
+async def add_opportunity_note(opp_id: int, content: str = Form(...), db: Session = Depends(get_db)):
+    note = OpportunityNote(opportunity_id=opp_id, content=content)
+    db.add(note)
+    db.commit()
+    return RedirectResponse(url=f"/opportunities/{opp_id}", status_code=303)
 
 app.mount("/invoices", StaticFiles(directory="Generated Invoices"), name="invoices")
 

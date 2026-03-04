@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levita One - {{ opportunity.client_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cta: '#0F766E',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+    <nav class="bg-white shadow-sm px-8 py-4 flex justify-between items-center border-b border-gray-200">
+        <div class="flex items-center space-x-4">
+            <a href="/"><img src="/static/logo.png" alt="Logo" class="h-16"></a>
+        </div>
+        <div class="flex items-center space-x-6">
+            <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
+                <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
+                <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
+                <a href="/opportunities" class="font-bold text-black border-b-2 border-black pb-1">Opportunities</a>
+                <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
+                <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
+                <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
+            </div>
+            
+            <div class="relative inline-block text-left" id="user-menu-container">
+                <button type="button" class="flex items-center justify-center w-10 h-10 rounded-full bg-cta text-white font-bold text-sm focus:outline-none border-2 border-transparent hover:border-cta transition" id="user-menu-button">
+                    AL
+                </button>
+                <div class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" id="user-menu-dropdown">
+                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                        <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-bold" role="menuitem">Settings</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-10">
+        <div class="flex justify-between items-start mb-8">
+            <div>
+                <a href="/opportunities" class="text-cta font-bold hover:underline mb-2 inline-block">← Back to Opportunities</a>
+                <h1 class="text-3xl font-extrabold text-black tracking-tight">{{ opportunity.client_name }}</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="px-4 py-2 rounded-full text-sm font-bold {% if opportunity.stage == 'Won' %}bg-green-100 text-green-700{% elif opportunity.stage == 'Lost' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %} uppercase tracking-widest">
+                    {{ opportunity.stage }}
+                </span>
+                <button onclick="toggleModal('edit-opportunity-modal')" class="bg-white text-black border border-gray-200 px-6 py-2 rounded-lg hover:bg-gray-50 transition shadow-sm font-bold">
+                    Edit Opportunity
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Details Panels -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Opportunity Details Panel -->
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 border-b border-gray-100 pb-2">Opportunity Details</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contract Type</span>
+                            <span class="font-bold text-black">{{ opportunity.contract_type or 'Not set' }}</span>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Day Rate</span>
+                            <span class="font-bold text-black">£{{ "{:,.2f}".format(opportunity.day_rate or 0) }}</span>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contract Value</span>
+                            <span class="font-bold text-black">£{{ "{:,.2f}".format(opportunity.contract_value or 0) }}</span>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Created</span>
+                            <span class="font-bold text-black">{{ opportunity.created_at.strftime('%d %b %Y') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Details Panel (Mirrors Contact Detail View) -->
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-2">
+                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Contact Details</h2>
+                        {% if contact %}
+                        <button onclick="toggleModal('contact-modal')" class="text-[10px] font-bold text-cta uppercase hover:underline">Edit Contact</button>
+                        {% endif %}
+                    </div>
+                    
+                    {% if contact %}
+                    <div class="space-y-6">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-cta text-white flex items-center justify-center font-bold text-xl">
+                                {{ contact.name[0] }}
+                            </div>
+                            <div>
+                                <a href="/contacts/{{ contact.id }}/detail" class="font-extrabold text-black text-xl hover:text-cta transition block leading-tight">{{ contact.name }}</a>
+                                <span class="text-xs text-gray-500 font-bold uppercase tracking-tighter">{{ contact.company.name if contact.company else 'No Company' }}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Email Address</label>
+                            <a href="mailto:{{ contact.current_email }}" class="font-bold text-cta hover:underline text-sm break-all">{{ contact.current_email or 'Not set' }}</a>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Mobile Number</label>
+                            <div class="font-bold text-black text-sm">{{ contact.mobile_number or 'Not set' }}</div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">LinkedIn Profile</label>
+                            {% if contact.linkedin_profile_url %}
+                            <a href="{{ contact.linkedin_profile_url }}" target="_blank" class="font-bold text-cta hover:underline text-xs break-all">{{ contact.linkedin_profile_url }}</a>
+                            {% else %}
+                            <div class="text-gray-400 italic text-sm">Not set</div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">Tags</label>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                {% for tag in contact.tags %}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-wider border border-gray-200">
+                                    {{ tag.name }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-400 italic text-center py-4">No contact associated.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Column: Activity Feed -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-8 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Combined Activity History</h2>
+                        <button onclick="toggleModal('note-modal')" class="bg-cta text-white px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-widest hover:opacity-90 transition shadow-sm">+ Add Note</button>
+                    </div>
+                    <div class="p-8">
+                        <div class="space-y-6">
+                            {% for item in activities %}
+                            <div class="{% if item.type == 'email' %}bg-white border-gray-100{% else %}bg-yellow-50/30 border-yellow-100{% endif %} border rounded-2xl p-6 relative hover:shadow-md transition group">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="text-[10px] font-bold uppercase tracking-tighter {% if item.type == 'email' %}text-blue-500{% else %}text-yellow-600{% endif %}">
+                                            {{ item.timestamp.strftime('%d %b %Y %H:%M') if item.timestamp is not string else item.timestamp }}
+                                        </div>
+                                        <span class="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded font-bold uppercase">{{ item.type }}</span>
+                                    </div>
+                                    {% if item.type == 'email' %}
+                                    <div class="text-[10px] text-gray-300 font-bold uppercase tracking-widest">GMAIL API</div>
+                                    {% endif %}
+                                </div>
+                                <div class="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">{{ item.content }}</div>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-16 text-gray-400 italic">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                No activity found for this opportunity or contact.
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Opportunity Note Modal -->
+    <div id="note-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 class="text-xl font-bold text-black">Add Opportunity Note</h2>
+                <button onclick="toggleModal('note-modal')" class="text-gray-400 hover:text-black transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form action="/opportunities/{{ opportunity.id }}/note" method="POST" class="p-8">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Content</label>
+                    <textarea name="content" rows="4" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cta/20 focus:border-cta outline-none transition font-medium" placeholder="What's happening with this opportunity?"></textarea>
+                </div>
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" class="bg-cta text-white px-10 py-3 rounded-xl font-bold hover:opacity-90 transition shadow-lg">
+                        Save Note
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Opportunity Modal -->
+    <div id="edit-opportunity-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 class="text-xl font-bold text-black">Edit Opportunity</h2>
+                <button onclick="toggleModal('edit-opportunity-modal')" class="text-gray-400 hover:text-black">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form action="/opportunities/add" method="POST" class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <input type="hidden" name="opportunity_id" value="{{ opportunity.id }}">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Client Name</label>
+                    <input type="text" name="client_name" value="{{ opportunity.client_name }}" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cta/20 focus:border-cta outline-none transition font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Stage</label>
+                    <select name="stage" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cta/20 focus:border-cta outline-none transition font-medium">
+                        {% for stage in ["Initial Chat / Idea", "Qualified Opportunity / Put Forward", "Proposal / Interview", "Negotiation / Offer", "Won", "Lost"] %}
+                        <option value="{{ stage }}" {% if opportunity.stage == stage %}selected{% endif %}>{{ stage }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Contract Type</label>
+                    <select name="contract_type" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cta/20 focus:border-cta outline-none transition font-medium">
+                        {% for type in ["Outside IR35 Day Rate", "Inside IR35 Day Rate", "Fixed Price", "T&M"] %}
+                        <option value="{{ type }}" {% if opportunity.contract_type == type %}selected{% endif %}>{{ type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Day Rate (£)</label>
+                    <input type="number" step="0.01" name="day_rate" value="{{ opportunity.day_rate or '' }}" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cta/20 focus:border-cta outline-none transition font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Contract Value (£)</label>
+                    <input type="number" step="0.01" name="contract_value" value="{{ opportunity.contract_value or '' }}" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cta/20 focus:border-cta outline-none transition font-medium">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Primary Contact</label>
+                    <select name="contact_id" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cta/20 focus:border-cta outline-none transition font-medium">
+                        <option value="">None</option>
+                        <!-- Assuming contacts are passed to this page, if not, we might need to add them -->
+                        <!-- For now, we only show current if available to avoid breakage -->
+                        {% if contact %}
+                        <option value="{{ contact.id }}" selected>{{ contact.name }}</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="md:col-span-2 mt-4 flex justify-end">
+                    <button type="submit" class="bg-cta text-white px-10 py-3 rounded-xl font-bold hover:opacity-90 transition shadow-lg">
+                        Update Opportunity
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if contact %}
+    <!-- Contact Edit Modal (Mirrors Contact Detail Page) -->
+    <div id="contact-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-xl font-bold text-black">Edit Contact</h3>
+                <button onclick="toggleModal('contact-modal')" class="text-gray-400 hover:text-black transition">&times;</button>
+            </div>
+            <form action="/contacts" method="POST" id="contact-form">
+                <input type="hidden" name="contact_id" value="{{ contact.id }}">
+                <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Full Name</label>
+                        <input type="text" name="name" value="{{ contact.name }}" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Current Company</label>
+                        <select name="company_id" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                            <option value="">None</option>
+                            {% for company in companies %}
+                            <option value="{{ company.id }}" {% if contact.company_id == company.id %}selected{% endif %}>{{ company.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Current Email</label>
+                        <input type="email" name="current_email" value="{{ contact.current_email or '' }}" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Mobile Number</label>
+                        <input type="text" name="mobile_number" value="{{ contact.mobile_number or '' }}" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">LinkedIn Profile URL</label>
+                        <input type="url" name="linkedin_profile_url" value="{{ contact.linkedin_profile_url or '' }}" placeholder="https://linkedin.com/in/..." class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Tags</label>
+                        <div class="flex flex-wrap gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            {% set contact_tag_names = contact.tags | map(attribute='name') | list %}
+                            {% for tag in all_tags %}
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" name="tags" value="{{ tag.name }}" {% if tag.name in contact_tag_names %}checked{% endif %} class="w-4 h-4 text-cta border-gray-300 rounded focus:ring-cta">
+                                <span class="text-sm font-bold text-gray-500 group-hover:text-black transition">{{ tag.name }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Historical Emails (Comma separated)</label>
+                        <textarea name="historical_emails" rows="2" placeholder="old1@company.com, old2@other.com" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cta focus:ring-2 focus:ring-cta/20 outline-none transition font-medium">{% for he in contact.historical_emails %}{{ he.email }}{{ ", " if not loop.last }}{% endfor %}</textarea>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end space-x-4">
+                    <button type="button" onclick="toggleModal('contact-modal')" class="px-6 py-2 text-gray-500 font-bold hover:text-black transition">Cancel</button>
+                    <button type="submit" class="bg-cta text-white px-10 py-2 rounded-xl font-bold hover:opacity-90 transition shadow-lg">Save Contact Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        const userMenuButton = document.getElementById('user-menu-button');
+        const userMenuDropdown = document.getElementById('user-menu-dropdown');
+
+        userMenuButton.addEventListener('click', () => {
+            userMenuDropdown.classList.toggle('hidden');
+        });
+
+        window.addEventListener('click', (event) => {
+            if (!document.getElementById('user-menu-container').contains(event.target)) {
+                userMenuDropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
