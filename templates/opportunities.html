@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Levita One - Opportunities</title>
+    <title>Levita One - Opportunity</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -26,7 +26,7 @@
             <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
                 <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
                 <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
-                <a href="/opportunities" class="font-bold text-black border-b-2 border-black pb-1">Opportunities</a>
+                <a href="/opportunities" class="font-bold text-black border-b-2 border-black pb-1">Opportunity</a>
                 <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
                 <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
                 <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
@@ -46,14 +46,30 @@
     </nav>
 
     <div class="max-w-6xl mx-auto px-4 py-10">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-extrabold text-black tracking-tight">Opportunities</h1>
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-3xl font-extrabold text-black tracking-tight">Opportunity</h1>
             <button onclick="toggleModal('opportunity-modal')" class="bg-cta text-white px-6 py-2 rounded-lg hover:opacity-90 transition shadow-sm font-bold">
                 + New Opportunity
             </button>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+        <div class="mb-8 max-w-md">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text" id="page-search" placeholder="Search opportunities..." class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-medium text-sm shadow-sm" onkeyup="filterPage()">
+            </div>
+        </div>
+
+        <!-- Live Opportunities -->
+        <h2 class="text-xl font-bold text-black mb-4 flex items-center uppercase tracking-widest text-sm">
+            <span class="w-2 h-2 bg-black rounded-full mr-2"></span>
+            Live Opportunities
+        </h2>
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 mb-12">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -65,14 +81,14 @@
                         <th class="px-6 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 bg-white">
-                    {% for opp in opportunities %}
+                <tbody class="divide-y divide-gray-200 bg-white" id="live-opps-body">
+                    {% for opp in opportunities if opp.stage not in ['Won', 'Lost'] %}
                     <tr class="hover:bg-gray-50 transition">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <a href="/opportunities/{{ opp.id }}" class="font-bold text-black hover:text-cta transition">{{ opp.client_name }}</a>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 rounded-full text-[10px] font-bold {% if opp.stage == 'Won' %}bg-green-100 text-green-700{% elif opp.stage == 'Lost' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %} uppercase tracking-wider">
+                            <span class="px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider">
                                 {{ opp.stage }}
                             </span>
                         </td>
@@ -97,7 +113,63 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="px-6 py-10 text-center text-gray-400 italic text-sm">No opportunities found.</td>
+                        <td colspan="6" class="px-6 py-10 text-center text-gray-400 italic text-sm">No live opportunities found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Closed Opportunities -->
+        <h2 class="text-xl font-bold text-gray-400 mb-4 flex items-center uppercase tracking-widest text-sm">
+            <span class="w-2 h-2 bg-gray-300 rounded-full mr-2"></span>
+            Closed Opportunities
+        </h2>
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 opacity-60">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Client</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Stage</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Contact</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Contract Type</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Value / Rate</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white" id="closed-opps-body">
+                    {% for opp in opportunities if opp.stage in ['Won', 'Lost'] %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="/opportunities/{{ opp.id }}" class="font-bold text-gray-500 hover:text-cta transition">{{ opp.client_name }}</a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 rounded-full text-[10px] font-bold {% if opp.stage == 'Won' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %} uppercase tracking-wider">
+                                {{ opp.stage }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            {{ opp.contact.name if opp.contact else 'N/A' }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            {{ opp.contract_type }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right font-bold text-gray-500">
+                            {% if opp.contract_value %}
+                                £{{ "{:,.2f}".format(opp.contract_value) }}
+                            {% elif opp.day_rate %}
+                                £{{ "{:,.2f}".format(opp.day_rate) }}/day
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="/opportunities/{{ opp.id }}" class="text-cta hover:text-black font-bold">View</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-10 text-center text-gray-300 italic text-sm">No closed opportunities found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -153,12 +225,15 @@
                     </div>
                     <div class="col-span-2">
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Contact</label>
-                        <select name="contact_id" id="form-contact-id" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-bold">
-                            <option value="">None</option>
-                            {% for contact in contacts %}
-                            <option value="{{ contact.id }}">{{ contact.name }} ({{ contact.company.name if contact.company else 'N/A' }})</option>
-                            {% endfor %}
-                        </select>
+                        <div class="relative">
+                            <input type="text" id="opp-contact-search" placeholder="Search contacts..." class="w-full px-4 py-2 mb-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition text-sm font-bold" onkeyup="filterContacts('opp-contact-search', 'opp-contact-select')">
+                            <select name="contact_id" id="opp-contact-select" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-bold">
+                                <option value="">None</option>
+                                {% for contact in contacts %}
+                                <option value="{{ contact.id }}">{{ contact.name }} ({{ contact.company.name if contact.company else 'N/A' }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="mt-8 flex justify-end">
@@ -171,6 +246,44 @@
     </div>
 
     <script>
+        function filterContacts(searchId, selectId) {
+            const input = document.getElementById(searchId);
+            const filter = input.value.toLowerCase();
+            const select = document.getElementById(selectId);
+            const options = select.getElementsByTagName('option');
+
+            for (let i = 0; i < options.length; i++) {
+                const txtValue = options[i].textContent || options[i].innerText;
+                const isMatch = txtValue.toLowerCase().indexOf(filter) > -1 || options[i].value === "";
+                
+                if (isMatch) {
+                    options[i].style.display = "";
+                    options[i].disabled = false;
+                } else {
+                    options[i].style.display = "none";
+                    options[i].disabled = true;
+                }
+            }
+        }
+
+        function filterPage() {
+            const searchTerm = document.getElementById('page-search').value.toLowerCase();
+            
+            // Filter Live Opportunities
+            const liveRows = document.querySelectorAll('#live-opps-body tr:not(:last-child)');
+            liveRows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+            
+            // Filter Closed Opportunities
+            const closedRows = document.querySelectorAll('#closed-opps-body tr:not(:last-child)');
+            closedRows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
         function toggleModal(id) {
             const modal = document.getElementById(id);
             modal.classList.toggle('hidden');

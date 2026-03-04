@@ -26,7 +26,7 @@
             <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
                 <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
                 <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
-                <a href="/opportunities" class="text-gray-500 hover:text-black transition">Opportunities</a>
+                <a href="/opportunities" class="text-gray-500 hover:text-black transition">Opportunity</a>
                 <a href="/projects" class="text-gray-500 hover:text-black transition">Engagements</a>
                 <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
                 <a href="/billing" class="font-bold text-black border-b-2 border-black pb-1">Billing</a>
@@ -49,7 +49,7 @@
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 py-10">
-        <div class="flex justify-between items-center mb-8">
+        <div class="flex justify-between items-center mb-4">
             <h1 class="text-3xl font-extrabold text-black tracking-tight">Billing</h1>
             <div class="flex items-center space-x-6">
                 <!-- Weekly/Monthly Toggle -->
@@ -95,6 +95,17 @@
             </div>
         </div>
 
+        <div class="mb-8 max-w-md">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text" id="page-search" placeholder="Search billing..." class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-medium text-sm shadow-sm" onkeyup="filterPage()">
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Calendar View -->
             <div class="lg:col-span-1">
@@ -135,7 +146,7 @@
                     <div class="p-4 bg-gray-50 border-b border-gray-200">
                         <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Engagement Summary</h2>
                     </div>
-                    <div class="divide-y divide-gray-200">
+                    <div class="divide-y divide-gray-200" id="billing-summary-list">
                         <div class="grid grid-cols-7 bg-gray-50/50">
                             <div class="col-span-2 p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Engagement</div>
                             <div class="p-4 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Hours</div>
@@ -208,6 +219,22 @@
     </div>
 </body>
 <script>
+    function filterPage() {
+        const searchTerm = document.getElementById('page-search').value.toLowerCase();
+        
+        // Filter Billing Summary
+        const list = document.getElementById('billing-summary-list');
+        const rows = list.querySelectorAll('.grid.grid-cols-7');
+        
+        rows.forEach((row, index) => {
+            // Skip header row
+            if (index === 0) return;
+            
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? 'grid' : 'none';
+        });
+    }
+
     const userMenuButton = document.getElementById('user-menu-button');
     const userMenuDropdown = document.getElementById('user-menu-dropdown');
 

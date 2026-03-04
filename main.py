@@ -7,7 +7,7 @@ from models import SessionLocal, Project, TimesheetRow, Invoice, Settings, Compa
 import uvicorn
 import os
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel
 from gmail_utils import get_gmail_service, create_draft_with_attachment, prepare_email_body, get_contact_messages
@@ -16,6 +16,8 @@ from timesheet_automation import TimesheetAutomation
 import asyncio
 
 from starlette.middleware.sessions import SessionMiddleware
+
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = FastAPI(title="Levita One")
 app.add_middleware(SessionMiddleware, secret_key="a-very-secret-key") # In production use an env var
@@ -113,11 +115,15 @@ async def google_auth(request: Request, db: Session = Depends(get_db)):
         redirect_uri=str(request.url_for("google_auth_callback"))
     )
     
-    authorization_url, state = flow.authorization_url(
-        access_type="offline",
-        include_granted_scopes="true",
-        prompt="consent"
-    )
+    try:
+        authorization_url, state = flow.authorization_url(
+            access_type="offline",
+            include_granted_scopes="false",
+            prompt="consent"
+        )
+    except Exception as e:
+        print(f"Error creating authorization URL: {e}")
+        return HTMLResponse(f"Error creating authorization URL: {e}", status_code=500)
     
     # Store state and code_verifier for PKCE in session
     request.session["state"] = state
@@ -129,8 +135,10 @@ async def google_auth(request: Request, db: Session = Depends(get_db)):
 @app.get("/auth/google/callback")
 async def google_auth_callback(request: Request, db: Session = Depends(get_db)):
     state = request.query_params.get("state")
-    if state != request.session.get("state"):
-        return HTMLResponse("Error: State mismatch.", status_code=400)
+    session_state = request.session.get("state")
+    if state != session_state:
+        print(f"State mismatch: query={state}, session={session_state}")
+        return HTMLResponse(f"Error: State mismatch. Expected {session_state}, got {state}", status_code=400)
         
     code = request.query_params.get("code")
     
@@ -148,8 +156,12 @@ async def google_auth_callback(request: Request, db: Session = Depends(get_db)):
     if "code_verifier" in request.session:
         flow.code_verifier = request.session["code_verifier"]
     
-    flow.fetch_token(code=code)
-    creds = flow.credentials
+    try:
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+    except Exception as e:
+        print(f"Error fetching token: {e}")
+        return HTMLResponse(f"Error fetching token: {e}", status_code=500)
     
     settings = db.query(Settings).first()
     if not settings:
@@ -963,8 +975,8 @@ def get_contact_json(contact_id: int, db: Session = Depends(get_db)):
 
 @app.get("/opportunities", response_class=HTMLResponse)
 async def list_opportunities(request: Request, db: Session = Depends(get_db)):
-    opportunities = db.query(Opportunity).all()
-    contacts = db.query(Contact).all()
+    opportunities = db.query(Opportunity).options(joinedload(Opportunity.contact)).all()
+    contacts = db.query(Contact).options(joinedload(Contact.company)).all()
     return templates.TemplateResponse("opportunities.html", {
         "request": request,
         "opportunities": opportunities,
@@ -1001,7 +1013,9 @@ async def add_opportunity(
 @app.get("/opportunities/{opp_id}", response_class=HTMLResponse)
 async def opportunity_detail(opp_id: int, request: Request, db: Session = Depends(get_db)):
     opp = db.query(Opportunity).options(
+        joinedload(Opportunity.notes),
         joinedload(Opportunity.contact).joinedload(Contact.tags),
+        joinedload(Opportunity.contact).joinedload(Contact.notes),
         joinedload(Opportunity.contact).joinedload(Contact.historical_emails)
     ).filter(Opportunity.id == opp_id).first()
     
@@ -1013,21 +1027,34 @@ async def opportunity_detail(opp_id: int, request: Request, db: Session = Depend
     # 1. Opportunity Notes
     for note in opp.notes:
         activities.append({
+            "id": note.id,
             "type": "note",
+            "source": "Opportunity Note",
             "content": note.content,
             "timestamp": note.timestamp
         })
     
     # 2. Contact Emails & Notes
     settings = db.query(Settings).first()
-    contact_notes = []
     if opp.contact:
-        # Include contact notes in activities? 
-        # The user wants "separate Activity list that includes all emails for the contact selected 
-        # but also notes that are specific to the opportunity"
-        # Wait, the previous solution said "logic to combine Gmail messages and manual notes into a single activity feed".
-        # Let's see how contact_detail does it. It separates them in the template.
-        # But opportunity_detail.html uses a single activity feed.
+        # Include contact comments
+        if opp.contact.comments:
+            activities.append({
+                "type": "note",
+                "source": "Contact Comment",
+                "content": f"{opp.contact.comments}",
+                "timestamp": opp.contact.created_at if hasattr(opp.contact, 'created_at') else opp.created_at
+            })
+            
+        # Include contact notes
+        for note in opp.contact.notes:
+            activities.append({
+                "id": note.id,
+                "type": "note",
+                "source": "Contact Note",
+                "content": note.content,
+                "timestamp": note.timestamp
+            })
         
         # Get emails from Gmail if connected
         if settings and settings.gmail_connection_status:
@@ -1041,6 +1068,7 @@ async def opportunity_detail(opp_id: int, request: Request, db: Session = Depend
                     for msg in gmail_activity:
                         activities.append({
                             "type": "email",
+                            "source": "Gmail",
                             "content": f"Subject: {msg.get('subject', 'No Subject')}\n{msg.get('snippet', '')}",
                             "timestamp": msg.get('date')
                         })
@@ -1052,16 +1080,25 @@ async def opportunity_detail(opp_id: int, request: Request, db: Session = Depend
         if isinstance(ts, str):
             try:
                 from dateutil import parser
-                return parser.parse(ts)
+                ts = parser.parse(ts)
             except:
-                return datetime.min
-        return ts if ts else datetime.min
+                ts = None
+        
+        if not ts:
+            return datetime.min
+            
+        # Handle naive vs aware comparison by normalizing everything to naive UTC
+        if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+            ts = ts.astimezone(timezone.utc).replace(tzinfo=None)
+        
+        return ts
 
     activities.sort(key=get_ts, reverse=True)
     
-    # Fetch data needed for edit modals if we want them here
+    # Fetch data needed for edit modals
     companies = db.query(Company).all()
     all_tags = db.query(Tag).all()
+    contacts = db.query(Contact).options(joinedload(Contact.company)).all()
 
     return templates.TemplateResponse("opportunity_detail.html", {
         "request": request,
@@ -1070,6 +1107,7 @@ async def opportunity_detail(opp_id: int, request: Request, db: Session = Depend
         "activities": activities,
         "companies": companies,
         "all_tags": all_tags,
+        "contacts": contacts,
         "settings": settings
     })
 

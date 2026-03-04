@@ -25,6 +25,7 @@ class Contact(Base):
     __tablename__ = 'contacts'
     
     id = Column(Integer, primary_key=True)
+    legacy_id = Column(Integer, unique=True, nullable=True)
     name = Column(String, nullable=False)
     linkedin_profile_url = Column(String)
     mobile_number = Column(String)

@@ -26,7 +26,7 @@
             <div class="space-x-6 mr-6 border-r border-gray-200 pr-6">
                 <a href="/" class="text-gray-500 hover:text-black transition">Dashboard</a>
                 <a href="/contacts" class="text-gray-500 hover:text-black transition">Contacts</a>
-                <a href="/opportunities" class="text-gray-500 hover:text-black transition">Opportunities</a>
+                <a href="/opportunities" class="text-gray-500 hover:text-black transition">Opportunity</a>
                 <a href="/projects" class="font-bold text-black border-b-2 border-black pb-1">Engagements</a>
                 <a href="/timesheets" class="text-gray-500 hover:text-black transition">Timesheets</a>
                 <a href="/billing" class="text-gray-500 hover:text-black transition">Billing</a>
@@ -49,11 +49,22 @@
     </nav>
 
     <div class="max-w-6xl mx-auto px-4 py-10">
-        <div class="flex justify-between items-center mb-8">
+        <div class="flex justify-between items-center mb-4">
             <h1 class="text-3xl font-extrabold text-black tracking-tight">Projects & Engagements</h1>
             <button onclick="toggleModal('add-modal')" class="bg-cta text-white px-6 py-2 rounded-lg hover:opacity-90 transition shadow-sm font-bold">
                 + New Engagement
             </button>
+        </div>
+
+        <div class="mb-8 max-w-md">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text" id="page-search" placeholder="Search engagements..." class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cta focus:border-transparent outline-none transition font-medium text-sm shadow-sm" onkeyup="filterPage()">
+            </div>
         </div>
 
         <!-- Live Engagements -->
@@ -71,7 +82,7 @@
                         <th class="px-6 py-3 text-center text-xs font-bold text-gray-400 uppercase tracking-widest w-40">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200">
+                <tbody class="divide-y divide-gray-200" id="live-engagements-body">
                     {% for project in projects if project.is_active %}
                     <tr class="hover:bg-gray-50 transition">
                         <td class="px-6 py-4 whitespace-nowrap font-bold text-black truncate" title="{{ project.name }}">{{ project.name }}</td>
@@ -105,7 +116,7 @@
                         <th class="px-6 py-3 text-center text-xs font-bold text-gray-400 uppercase tracking-widest w-48">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200">
+                <tbody class="divide-y divide-gray-200" id="completed-engagements-body">
                     {% for project in projects if not project.is_active %}
                     <tr class="hover:bg-gray-50 transition">
                         <td class="px-6 py-4 whitespace-nowrap font-bold text-gray-500 truncate" title="{{ project.name }}">{{ project.name }}</td>
@@ -219,6 +230,24 @@
     </div>
 
     <script>
+        function filterPage() {
+            const searchTerm = document.getElementById('page-search').value.toLowerCase();
+            
+            // Filter Live Engagements
+            const liveRows = document.querySelectorAll('#live-engagements-body tr:not(:last-child)');
+            liveRows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+            
+            // Filter Completed Engagements
+            const completedRows = document.querySelectorAll('#completed-engagements-body tr:not(:last-child)');
+            completedRows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
         const userMenuButton = document.getElementById('user-menu-button');
         const userMenuDropdown = document.getElementById('user-menu-dropdown');
 

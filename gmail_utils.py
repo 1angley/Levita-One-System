@@ -122,7 +122,8 @@ def create_draft_with_attachment(service, sender, recipient, subject, body_text,
     except HttpError as error:
         print(f'An error occurred calling Gmail API: {error}')
         if error.resp.status == 403:
-            print("DEBUG: Access forbidden. Check if Gmail API is enabled and scopes are correct.")
+            print(f"DEBUG: Access forbidden (403). Content: {error.content}")
+            print("DEBUG: Check if Gmail API is enabled and scopes are correct.")
         return None
     except Exception as e:
         print(f"DEBUG: General error in create_draft_with_attachment: {e}")
@@ -154,11 +155,19 @@ def get_contact_messages(service, emails: List[str]):
     
     try:
         # Join emails with OR for searching
-        query = " OR ".join([f"from:{e} OR to:{e}" for e in emails])
+        # Use quotes around emails to handle potential special characters
+        query_parts = []
+        for e in emails:
+            if e:
+                query_parts.append(f'from:"{e}" OR to:"{e}"')
+        
+        if not query_parts:
+            return []
+            
+        query = " OR ".join(query_parts)
         print(f"DEBUG: Gmail SEARCH Query: {query}")
         
-        # Use request with timeout if possible (googleapiclient has some options but not direct timeout)
-        # We'll at least log where we are
+        # Use request with timeout if possible
         print("DEBUG: Executing users().messages().list...")
         results = service.users().messages().list(userId='me', q=query, maxResults=20).execute()
         messages = results.get('messages', [])
@@ -187,6 +196,11 @@ def get_contact_messages(service, emails: List[str]):
             })
         print("DEBUG: Completed fetching message details.")
         return full_messages
+    except HttpError as error:
+        print(f"Error fetching Gmail messages: {error}")
+        if error.resp.status == 403:
+            print(f"DEBUG: Access forbidden (403) in get_contact_messages. Content: {error.content}")
+        return []
     except Exception as e:
         print(f"Error fetching Gmail messages: {e}")
         return []
